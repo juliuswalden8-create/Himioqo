@@ -1,53 +1,33 @@
+import type { Dictionary } from "@/i18n/messages";
 import type {
   CaseCategory,
   CasePriority,
   CaseStatus,
+  MessageAuthor,
   PropertyHealth,
   PropertyType,
 } from "@/lib/types";
 
-export const STATUS_LABEL: Record<CaseStatus, string> = {
-  new: "Ny",
-  waiting: "Väntar på åtgärd",
-  assigned: "Hantverkare tilldelad",
-  in_progress: "Pågår",
-  resolved: "Löst",
-};
+export function statusLabel(dict: Dictionary, status: CaseStatus) {
+  return dict.status.case[status] ?? status;
+}
 
-export const PRIORITY_LABEL: Record<CasePriority, string> = {
-  low: "Inte akut",
-  soon: "Behöver åtgärdas snart",
-  urgent: "Akut",
-};
+export function priorityLabel(dict: Dictionary, priority: CasePriority) {
+  return dict.status.priority[priority] ?? priority;
+}
 
-export const CATEGORY_LABEL: Record<CaseCategory, string> = {
-  water: "Vatten eller läcka",
-  electricity: "El",
-  hvac: "Värme eller ventilation",
-  appliances: "Vitvaror",
-  lock: "Lås eller dörr",
-  bathroom: "Badrum",
-  kitchen: "Kök",
-  furniture: "Skada på möbler",
-  internet: "Internet",
-  other: "Annat",
-};
+export function healthLabel(dict: Dictionary, health: PropertyHealth) {
+  return dict.status.health[health] ?? health;
+}
 
-export const HEALTH_LABEL: Record<PropertyHealth, string> = {
-  good: "Allt ser bra ut",
-  attention: "Behöver uppmärksamhet",
-  critical: "Kräver åtgärd",
-};
+export function propertyTypeLabel(dict: Dictionary, type: PropertyType) {
+  return dict.status.propertyType[type] ?? type;
+}
 
-export const TYPE_LABEL: Record<PropertyType, string> = {
-  apartment: "Lägenhet",
-  house: "Hus",
-  villa: "Villa",
-};
+export function authorLabel(dict: Dictionary, author: MessageAuthor) {
+  return dict.status.author[author] ?? author;
+}
 
-export const AUTHOR_LABEL: Record<string, string> = {
-  owner: "Förvaltare",
-  tenant: "Hyresgäst",
-  contractor: "Hantverkare",
-  system: "System",
-};
+export function categoryLabel(dict: Dictionary, category: CaseCategory) {
+  return dict.report.categories[category] ?? category;
+}

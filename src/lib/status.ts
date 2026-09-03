@@ -2,14 +2,19 @@ import type { CasePriority, CaseStatus, PropertyHealth } from "@/lib/types";
 
 export const STATUS_CLASS: Record<CaseStatus, string> = {
   new: "bg-status-new/10 text-status-new",
-  waiting: "bg-status-waiting/10 text-status-waiting",
+  reviewing: "bg-status-new/10 text-status-new",
   assigned: "bg-status-assigned/10 text-status-assigned",
+  accepted: "bg-status-assigned/10 text-status-assigned",
   in_progress: "bg-status-progress/15 text-status-progress",
+  waiting: "bg-status-waiting/10 text-status-waiting",
   resolved: "bg-status-done/10 text-status-done",
+  approved: "bg-status-done/10 text-status-done",
+  cancelled: "bg-navy-50 text-navy-500",
 };
 
 export const PRIORITY_CLASS: Record<CasePriority, string> = {
   low: "bg-navy-50 text-navy-600",
+  normal: "bg-navy-50 text-navy-600",
   soon: "bg-status-waiting/10 text-status-waiting",
   urgent: "bg-status-urgent/10 text-status-urgent",
 };

@@ -1,4 +1,4 @@
--- Homiqo schema for Supabase
+-- Homioqo schema for Supabase
 -- Run in the SQL editor of a new project. Enable RLS on every table.
 
 create extension if not exists "pgcrypto";

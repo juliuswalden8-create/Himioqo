@@ -16,15 +16,17 @@ export function createId(): string {
   });
 }
 
+/**
+ * Public QR, contractor, cleaner and owner links are guarded only by these
+ * tokens, so weak randomness would make them guessable. Fail loudly instead of
+ * degrading to Math.random.
+ */
 export function createToken(prefix = "pc"): string {
-  const bytes = new Uint8Array(18);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < bytes.length; i += 1) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
+  if (typeof crypto === "undefined" || !crypto.getRandomValues) {
+    throw new Error("A secure random source is required to create access tokens.");
   }
+  const bytes = new Uint8Array(18);
+  crypto.getRandomValues(bytes);
   const body = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   return `${prefix}_${body}`;
 }
@@ -52,6 +54,12 @@ export function daysAgo(days: number, hours = 10, minutes = 0): string {
 
 export function hoursAgo(hours: number): string {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+}
+
+export function todayAt(hour: number, minute = 0): string {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
 }
 
 export function daysFromNow(days: number, hours = 10, minutes = 0): string {

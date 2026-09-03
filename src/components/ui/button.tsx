@@ -4,24 +4,25 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-[color,background-color,border-color,box-shadow,transform] duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0",
   {
     variants: {
       variant: {
-        default: "bg-navy-800 text-white hover:bg-navy-700 shadow-soft",
+        default: "bg-ocean text-white hover:bg-ocean-hover shadow-soft",
+        cta: "bg-terracotta text-white hover:bg-terracotta-hover shadow-soft",
         secondary:
-          "bg-white text-navy-800 border border-border hover:bg-navy-50 shadow-soft",
+          "bg-white text-ocean border border-ocean/20 hover:bg-sage shadow-soft",
         outline:
-          "border border-border bg-white text-navy-800 hover:bg-navy-50 hover:border-navy-200",
-        ghost: "text-navy-800 hover:bg-navy-50",
+          "border border-ocean bg-white/80 text-ocean hover:bg-sage hover:border-ocean",
+        ghost: "text-ocean hover:bg-sage",
         success: "bg-green-500 text-white hover:bg-green-600 shadow-soft",
-        link: "text-navy-700 underline-offset-4 hover:underline px-0",
+        link: "text-terracotta underline-offset-4 hover:underline hover:text-terracotta-hover px-0",
         destructive: "bg-destructive text-white hover:bg-red-700",
       },
       size: {
         default: "h-11 px-5",
         sm: "h-9 px-3.5 text-xs rounded-lg",
-        lg: "h-12 px-6 text-base",
+        lg: "h-12 px-7 text-base",
         icon: "h-10 w-10",
       },
     },

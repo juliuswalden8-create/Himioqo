@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 178 36" fill="none">
+  <text x="0" y="24" font-family="Manrope, ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="600" fill="#1D292B" letter-spacing="-1.2">homio</text>
+  <g transform="translate(90 1.5)">
+    <path fill="#1D292B" fill-rule="evenodd" d="M11 1.6c5.3 0 9.6 4.3 9.6 9.6S16.3 20.8 11 20.8 1.4 16.5 1.4 11.2 5.7 1.6 11 1.6Zm0 6.1a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/>
+    <path fill="#1D292B" d="M16.7 18.4c.7 1.5 1.25 3.55 1.4 5.85-.95-.25-2.35-.9-3.65-2.35-.55.95-1.15 1.6-1.4 1.8.25-2.05.95-4.45 2.05-5.95.45.2 1 .4 1.6.65Z"/>
+  </g>
+  <text x="114" y="24" font-family="Manrope, ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="600" fill="#1D292B" letter-spacing="-1.2">o</text>
+</svg>

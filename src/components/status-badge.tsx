@@ -1,9 +1,16 @@
-import { HEALTH_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "@/lib/labels";
+import type { Dictionary } from "@/i18n/messages";
+import { healthLabel, priorityLabel, statusLabel } from "@/lib/labels";
 import { HEALTH_CLASS, PRIORITY_CLASS, STATUS_CLASS } from "@/lib/status";
 import type { CasePriority, CaseStatus, PropertyHealth } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function StatusBadge({ status }: { status: CaseStatus }) {
+export function StatusBadge({
+  status,
+  dict,
+}: {
+  status: CaseStatus;
+  dict: Dictionary;
+}) {
   return (
     <span
       className={cn(
@@ -12,12 +19,18 @@ export function StatusBadge({ status }: { status: CaseStatus }) {
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {STATUS_LABEL[status]}
+      {statusLabel(dict, status)}
     </span>
   );
 }
 
-export function PriorityBadge({ priority }: { priority: CasePriority }) {
+export function PriorityBadge({
+  priority,
+  dict,
+}: {
+  priority: CasePriority;
+  dict: Dictionary;
+}) {
   return (
     <span
       className={cn(
@@ -25,12 +38,18 @@ export function PriorityBadge({ priority }: { priority: CasePriority }) {
         PRIORITY_CLASS[priority],
       )}
     >
-      {PRIORITY_LABEL[priority]}
+      {priorityLabel(dict, priority)}
     </span>
   );
 }
 
-export function HealthBadge({ health }: { health: PropertyHealth }) {
+export function HealthBadge({
+  health,
+  dict,
+}: {
+  health: PropertyHealth;
+  dict: Dictionary;
+}) {
   return (
     <span
       className={cn(
@@ -39,7 +58,7 @@ export function HealthBadge({ health }: { health: PropertyHealth }) {
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {HEALTH_LABEL[health]}
+      {healthLabel(dict, health)}
     </span>
   );
 }

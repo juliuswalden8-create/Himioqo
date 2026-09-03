@@ -1,0 +1,55 @@
+import { cookies } from "next/headers";
+import { FALLBACK_LOCALE, LOCALE_COOKIE } from "@/lib/constants";
+import { normalizeLocale } from "@/lib/i18n/languages";
+import { builtinDictionary, en, sv, type Dictionary } from "@/i18n/messages";
+import { interpolate } from "@/i18n/interpolate";
+import { translateText } from "@/lib/i18n/translate";
+
+const cache = globalThis as unknown as { __hqDict?: Map<string, Dictionary> };
+
+function dictCache() {
+  if (!cache.__hqDict) cache.__hqDict = new Map();
+  return cache.__hqDict;
+}
+
+export async function getLocale() {
+  const jar = await cookies();
+  return normalizeLocale(jar.get(LOCALE_COOKIE)?.value);
+}
+
+export async function getDictionary(locale?: string): Promise<Dictionary> {
+  const code = locale ?? (await getLocale());
+  const builtin = builtinDictionary(code);
+  if (builtin) return builtin;
+  const hit = dictCache().get(code);
+  if (hit) return hit;
+  const translated = await translateDictionary(en, code);
+  dictCache().set(code, translated);
+  return translated;
+}
+
+async function translateDictionary(source: Dictionary, locale: string): Promise<Dictionary> {
+  async function walk(value: unknown): Promise<unknown> {
+    if (typeof value === "string") {
+      const result = await translateText(value, locale, FALLBACK_LOCALE);
+      return result.translated;
+    }
+    if (Array.isArray(value)) {
+      return Promise.all(value.map((item) => walk(item)));
+    }
+    if (value && typeof value === "object") {
+      const entries = await Promise.all(
+        Object.entries(value).map(async ([key, item]) => [key, await walk(item)]),
+      );
+      return Object.fromEntries(entries);
+    }
+    return value;
+  }
+  try {
+    return (await walk(source)) as Dictionary;
+  } catch {
+    return en;
+  }
+}
+
+export { interpolate, sv, en };

@@ -2,24 +2,44 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/constants";
 import {
   addAfterPhotos,
+  addCaseNote,
   addMessage,
-  assignContractor,
+  approveCase,
   authenticate,
   createProperty,
+  getOrganizationLocale,
   getProfile,
   markInboxRead,
+  markNotificationsRead,
+  pushNotification,
   registerAccount,
+  reopenCase,
+  rotateWorkToken,
+  setCaseWorkOrder,
   submitReport,
   tenantConfirm,
+  updateCasePriority,
   updateCaseStatus,
   updateOrganization,
   updateProfile,
 } from "@/lib/data/store";
+import { priorityLabel, statusLabel } from "@/lib/labels";
 import { clearSession, requireSession, setSession } from "@/lib/session";
-import type { CaseCategory, CasePriority, CaseStatus, PropertyType } from "@/lib/types";
+import {
+  CASE_CATEGORIES,
+  CASE_PRIORITIES,
+  CASE_STATUSES,
+  GUEST_PRIORITIES,
+  type CaseCategory,
+  type CasePriority,
+  type CaseStatus,
+  type PropertyType,
+} from "@/lib/types";
+import { parsePhotoPayload } from "@/lib/uploads";
 import { isValidEmail } from "@/lib/utils";
 
 function revalidateAll() {
@@ -32,7 +52,10 @@ export async function loginAction(formData: FormData) {
   const next = String(formData.get("next") ?? "/app");
   const profile = authenticate(email, password);
   if (!profile) {
-    return { error: "Fel e-post eller lösenord" };
+    return { error: "login" };
+  }
+  if (!profile.emailVerifiedAt) {
+    return { error: "unverified" };
   }
   await setSession({
     profileId: profile.id,
@@ -43,7 +66,7 @@ export async function loginAction(formData: FormData) {
 
 export async function demoLoginAction() {
   const profile = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
-  if (!profile) return { error: "Demokontot saknas" };
+  if (!profile) redirect("/login");
   await setSession({
     profileId: profile.id,
     organizationId: profile.organizationId,
@@ -127,56 +150,162 @@ export async function createPropertyAction(formData: FormData) {
 }
 
 export async function submitReportAction(formData: FormData) {
-  const photosRaw = String(formData.get("photos") ?? "[]");
-  let photos: { url: string; caption?: string }[] = [];
-  try {
-    photos = JSON.parse(photosRaw) as { url: string; caption?: string }[];
-  } catch {
-    photos = [];
+  const category = String(formData.get("category") ?? "other") as CaseCategory;
+  const priority = String(formData.get("priority") ?? "soon") as CasePriority;
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+
+  if (!CASE_CATEGORIES.includes(category)) return { error: "category" };
+  if (!GUEST_PRIORITIES.includes(priority as (typeof GUEST_PRIORITIES)[number])) {
+    return { error: "priority" };
   }
+  if (!title || !description) return { error: "required" };
+
+  const parsed = parsePhotoPayload(formData.get("photos"));
+  if (!parsed.ok) return { error: parsed.reason };
+
+  let trackToken: string;
   try {
     const created = submitReport({
       propertyToken: String(formData.get("propertyToken") ?? ""),
-      category: String(formData.get("category") ?? "other") as CaseCategory,
-      priority: String(formData.get("priority") ?? "soon") as CasePriority,
-      title: String(formData.get("title") ?? "").trim(),
-      description: String(formData.get("description") ?? "").trim(),
+      category,
+      priority,
+      title: title.slice(0, 200),
+      description: description.slice(0, 5000),
       discoveredAt: String(formData.get("discoveredAt") ?? new Date().toISOString()),
       stillOngoing: String(formData.get("stillOngoing") ?? "true") === "true",
-      reporterName: String(formData.get("reporterName") ?? "").trim(),
-      reporterPhone: String(formData.get("reporterPhone") ?? "").trim(),
-      reporterEmail: String(formData.get("reporterEmail") ?? "").trim(),
-      photos,
+      reporterName: String(formData.get("reporterName") ?? "").trim().slice(0, 120),
+      reporterPhone: String(formData.get("reporterPhone") ?? "").trim().slice(0, 40),
+      reporterEmail: String(formData.get("reporterEmail") ?? "").trim().slice(0, 200),
+      photos: parsed.photos,
+      locale: String(formData.get("locale") ?? "sv"),
     });
-    revalidateAll();
-    redirect(`/t/${created.trackToken}?new=1`);
+    const orgDict = await getDictionary(getOrganizationLocale(created.organizationId));
+    const urgent = created.priority === "urgent";
+    pushNotification({
+      organizationId: created.organizationId,
+      kind: urgent ? "case_urgent" : "case_new",
+      title: urgent ? orgDict.notifications.caseUrgent : orgDict.notifications.caseNew,
+      body: `${created.reference} · ${created.property.name}`,
+      href: `/app/cases/${created.id}`,
+    });
+    trackToken = created.trackToken;
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Kunde inte skicka anmälan" };
+    return { error: error instanceof Error ? error.message : "generic" };
   }
+
+  revalidateAll();
+  // Outside the try block: redirect() signals by throwing, and a catch here
+  // would swallow it and leave the guest on the form.
+  redirect(`/t/${trackToken}?new=1`);
+}
+
+/** Resolves the acting manager's name and their dictionary in one go. */
+async function actingManager(profileId: string) {
+  const profile = getProfile(profileId);
+  const dict = await getDictionary(profile?.locale || (await getLocale()));
+  return { name: profile?.fullName ?? "Förvaltare", dict, profile };
 }
 
 export async function changeStatusAction(formData: FormData) {
   const session = await requireSession();
-  const profile = getProfile(session.profileId);
+  const { name, dict } = await actingManager(session.profileId);
+  const status = String(formData.get("status") ?? "") as CaseStatus;
+  if (!CASE_STATUSES.includes(status)) return { error: "status" };
   updateCaseStatus(
     session.organizationId,
     String(formData.get("caseId") ?? ""),
-    String(formData.get("status") ?? "") as CaseStatus,
-    profile?.fullName ?? "Förvaltare",
+    status,
+    name,
+    statusLabel(dict, status),
+  );
+  revalidateAll();
+}
+
+export async function changePriorityAction(formData: FormData) {
+  const session = await requireSession();
+  const { name, dict } = await actingManager(session.profileId);
+  const priority = String(formData.get("priority") ?? "") as CasePriority;
+  if (!CASE_PRIORITIES.includes(priority)) return { error: "priority" };
+  updateCasePriority(
+    session.organizationId,
+    String(formData.get("caseId") ?? ""),
+    priority,
+    name,
+    priorityLabel(dict, priority),
   );
   revalidateAll();
 }
 
 export async function assignContractorAction(formData: FormData) {
   const session = await requireSession();
-  const profile = getProfile(session.profileId);
+  const { name } = await actingManager(session.profileId);
   const contractorId = String(formData.get("contractorId") ?? "");
-  assignContractor(
-    session.organizationId,
-    String(formData.get("caseId") ?? ""),
-    contractorId || undefined,
-    profile?.fullName ?? "Förvaltare",
-  );
+  const instructions = formData.get("instructions");
+  try {
+    setCaseWorkOrder({
+      organizationId: session.organizationId,
+      caseId: String(formData.get("caseId") ?? ""),
+      contractorId: contractorId || undefined,
+      instructions: instructions === null ? undefined : String(instructions),
+      actorName: name,
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "assign" };
+  }
+  revalidateAll();
+}
+
+export async function rotateWorkTokenAction(formData: FormData) {
+  const session = await requireSession();
+  rotateWorkToken(session.organizationId, String(formData.get("caseId") ?? ""));
+  revalidateAll();
+}
+
+export async function addCaseNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const { name } = await actingManager(session.profileId);
+  const text = String(formData.get("text") ?? "").trim();
+  if (!text) return { error: "empty" };
+  if (text.length > 2000) return { error: "long" };
+  addCaseNote(session.organizationId, String(formData.get("caseId") ?? ""), name, text);
+  revalidateAll();
+}
+
+export async function approveCaseAction(formData: FormData) {
+  const session = await requireSession();
+  const { name, dict } = await actingManager(session.profileId);
+  const caseId = String(formData.get("caseId") ?? "");
+  const item = approveCase(session.organizationId, caseId, name);
+  pushNotification({
+    organizationId: session.organizationId,
+    kind: "case_approved",
+    title: dict.notifications.caseApproved,
+    body: `${item.reference} · ${item.property.name}`,
+    href: `/app/cases/${item.id}`,
+  });
+  revalidateAll();
+}
+
+export async function reopenCaseAction(formData: FormData) {
+  const session = await requireSession();
+  const { name, dict } = await actingManager(session.profileId);
+  const caseId = String(formData.get("caseId") ?? "");
+  const item = reopenCase(session.organizationId, caseId, name);
+  pushNotification({
+    organizationId: session.organizationId,
+    kind: "case_reopened",
+    title: dict.notifications.caseReopened,
+    body: `${item.reference} · ${item.property.name}`,
+    href: `/app/cases/${item.id}`,
+  });
+  revalidateAll();
+}
+
+export async function markNotificationsReadAction(formData: FormData) {
+  const session = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  markNotificationsRead(session.organizationId, id || undefined);
   revalidateAll();
 }
 
@@ -184,26 +313,28 @@ export async function sendOwnerMessageAction(formData: FormData) {
   const session = await requireSession();
   const profile = getProfile(session.profileId);
   const text = String(formData.get("text") ?? "").trim();
-  if (!text) return { error: "Skriv ett meddelande" };
+  if (!text) return;
   addMessage({
     caseId: String(formData.get("caseId") ?? ""),
     organizationId: session.organizationId,
     author: "owner",
     authorName: profile?.fullName ?? "Förvaltare",
     text,
+    locale: profile?.locale,
   });
   revalidateAll();
 }
 
 export async function sendTenantMessageAction(formData: FormData) {
   const text = String(formData.get("text") ?? "").trim();
-  if (!text) return { error: "Skriv ett meddelande" };
+  if (!text) return;
   addMessage({
     caseId: String(formData.get("caseId") ?? ""),
     trackToken: String(formData.get("trackToken") ?? ""),
     author: "tenant",
     authorName: String(formData.get("authorName") ?? "Hyresgäst"),
     text,
+    locale: String(formData.get("locale") ?? "sv"),
   });
   revalidateAll();
 }

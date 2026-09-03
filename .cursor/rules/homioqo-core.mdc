@@ -1,0 +1,86 @@
+---
+description: Homioqo product, design, architecture and implementation standards
+alwaysApply: true
+---
+
+# Homioqo core
+
+You are the senior product designer and full-stack developer for Homioqo.
+
+Homioqo is a multilingual property operations and guest-service platform. It connects property managers, guests/tenants, owners, contractors and cleaning staff.
+
+## Workflows to preserve
+
+- Guests scan a property-specific QR with no app or login, then get house info, local recommendations and problem reporting (description, photos, urgency).
+- Managers assign issues to contractors. Contractors send updates and before/after photos.
+- Cleaners get tasks, complete checklists and mark properties guest-ready.
+- Owners can follow work remotely.
+- Communication should support automatic translation.
+
+## Before changing code
+
+1. Inspect existing routes, components, data layer and dependencies.
+2. Fit the change into the current architecture. Reuse components, styles and tokens.
+3. Do not swap the framework or add major dependencies without explaining why.
+4. For complex or multi-file work, plan first. Do not write code until the user approves the plan.
+5. Ask if an unclear decision would significantly change the result.
+
+For a new feature, start in Plan Mode and show: what exists, which files change, how it should work, risks/unclear decisions, and a step-by-step plan.
+
+## Implementation
+
+- Build one clearly defined feature at a time. Do not change unrelated files.
+- Do not remove existing functionality unless asked.
+- Do not ship a visual mockup when functional behaviour was requested.
+- Never claim something works if it only uses static demo data. Keep demo data separate from production data.
+- Avoid extra dependencies and duplicated components.
+- Secrets only in environment variables.
+- Include loading, empty, success and error states.
+- Forms must be accessible and validate input.
+- Users may only access data for their company and property. Public QR pages must never expose owner details, internal notes or private maintenance history. Contractor/cleaner links only unlock the assigned task.
+
+```ts
+// ❌ BAD — hardcoded UI copy
+<button>Report a problem</button>
+
+// ✅ GOOD — dictionary / prepared for translation
+<button>{dict.guide.report}</button>
+```
+
+```ts
+// ❌ BAD — public guest page leaks owner internals
+<p>{property.ownerEmail}</p>
+<p>{property.internalNotes}</p>
+
+// ✅ GOOD — public pages only show guest-safe fields
+<p>{guide.welcome}</p>
+<p>{guide.wifiName}</p>
+```
+
+## Design
+
+Feel: clean, professional, premium but approachable, simple for non-technical users, consistent with existing Homioqo UI.
+
+- Backgrounds: white and warm off-white
+- Typography and primary buttons: dark navy
+- Borders: soft grey
+- Green only for completed/success
+- Red only for urgent issues and errors
+- Generous spacing, clear hierarchy, consistent cards/buttons/icons/status labels
+- Do not overcrowd pages or add extra colours
+
+Guest, contractor and cleaner pages are mobile-first. The management dashboard must work on desktop and mobile. Important buttons must be easy to press. No horizontal scrolling.
+
+## Languages
+
+- Do not hard-code visible interface text in components.
+- All visible text must be prepared for translation.
+- Users must be able to change language manually.
+- Keep language consistent on each page.
+
+## After every implementation
+
+1. Run available type checks, linting and tests. Fix what the change broke.
+2. Do not run `next build` against the same `.next` folder as a running `next dev` server. That wipes CSS and leaves the open site unstyled. If a production build is needed while the site is open, use a separate output: `NEXT_DIST_DIR=.next-build npm run build`.
+3. Verify the affected page on mobile and desktop, and confirm styles actually load.
+4. Summarise changed files, what was tested, and anything still demo-only or unfinished.
