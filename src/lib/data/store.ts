@@ -37,6 +37,8 @@ import type {
   CaseFilters,
   CaseMessage,
   CaseNote,
+  CasePriority,
+  CaseSort,
   CaseStatus,
   CaseWithRelations,
   Notification,
@@ -67,6 +69,7 @@ import type {
   Profile,
   Place,
   PlaceCategory,
+  PropertyTraffic,
   PlaceMonetization,
   Property,
   PropertyEvent,
@@ -80,7 +83,7 @@ import type {
   UnitBand,
   VerificationToken,
 } from "@/lib/types";
-import { CLOSED_STATUSES, OPEN_STATUSES } from "@/lib/types";
+import { CLOSED_STATUSES, OPEN_STATUSES, CASE_STATUSES } from "@/lib/types";
 import { DEFAULT_CHECK_KEYS, DEFAULT_CHECK_LABELS } from "@/lib/cleaning";
 import { createId, createToken, daysFromNow, nowIso } from "@/lib/utils";
 
@@ -113,18 +116,18 @@ interface StoreShape {
   pilotLeads: PilotLead[];
 }
 
-const globalForStore = globalThis as unknown as { __hqStore5?: StoreShape };
+const globalForStore = globalThis as unknown as { __hqStore7?: StoreShape };
 
 function getStore(): StoreShape {
-  if (!globalForStore.__hqStore5) {
-    globalForStore.__hqStore5 = createInitial();
+  if (!globalForStore.__hqStore7) {
+    globalForStore.__hqStore7 = createInitial();
   }
-  return globalForStore.__hqStore5;
+  return globalForStore.__hqStore7;
 }
 
 /** Test-only. Restores the seeded state so each test starts from a clean slate. */
 export function resetStore() {
-  globalForStore.__hqStore5 = createInitial();
+  globalForStore.__hqStore7 = createInitial();
 }
 
 function createInitial(): StoreShape {
@@ -750,8 +753,30 @@ export function listCases(
     });
   }
 
+  const sort: CaseSort = filters.sort ?? "date";
+  const priorityRank: Record<CasePriority, number> = {
+    urgent: 0,
+    soon: 1,
+    normal: 2,
+    low: 3,
+  };
+  const statusRank = Object.fromEntries(CASE_STATUSES.map((status, index) => [status, index])) as Record<
+    CaseStatus,
+    number
+  >;
+
   return items
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .sort((a, b) => {
+      if (sort === "priority") {
+        const diff = priorityRank[a.priority] - priorityRank[b.priority];
+        if (diff) return diff;
+      }
+      if (sort === "status") {
+        const diff = statusRank[a.status] - statusRank[b.status];
+        if (diff) return diff;
+      }
+      return b.createdAt.localeCompare(a.createdAt);
+    })
     .map(hydrateCase);
 }
 
@@ -771,6 +796,16 @@ export function getDashboardStats(organizationId: string): DashboardStats {
   const properties = listProperties(organizationId);
   const cases = listCases(organizationId);
   const monthStart = startOfMonth(new Date()).toISOString();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  const inRange = (iso: string, from: string, to: string) => iso >= from && iso < to;
+  const flowDelta = (predicate: (item: (typeof cases)[number]) => boolean, dateOf: (item: (typeof cases)[number]) => string) => {
+    const recent = cases.filter((item) => predicate(item) && inRange(dateOf(item), weekAgo, "9999")).length;
+    const previous = cases.filter((item) => predicate(item) && inRange(dateOf(item), twoWeeksAgo, weekAgo)).length;
+    return recent - previous;
+  };
+
   return {
     propertyCount: properties.length,
     newCases: cases.filter((c) => c.status === "new").length,
@@ -781,6 +816,21 @@ export function getDashboardStats(organizationId: string): DashboardStats {
     urgentCases: cases.filter(
       (c) => c.priority === "urgent" && OPEN_STATUSES.includes(c.status),
     ).length,
+    deltas: {
+      propertyCount:
+        properties.filter((p) => p.createdAt >= weekAgo).length -
+        properties.filter((p) => inRange(p.createdAt, twoWeeksAgo, weekAgo)).length,
+      newCases: flowDelta((c) => c.status === "new", (c) => c.createdAt),
+      openCases: flowDelta((c) => OPEN_STATUSES.includes(c.status), (c) => c.createdAt),
+      resolvedThisMonth: flowDelta(
+        (c) => CLOSED_STATUSES.includes(c.status),
+        (c) => c.completedAt ?? c.updatedAt,
+      ),
+      urgentCases: flowDelta(
+        (c) => c.priority === "urgent" && OPEN_STATUSES.includes(c.status),
+        (c) => c.createdAt,
+      ),
+    },
   };
 }
 
@@ -969,6 +1019,53 @@ export function submitReport(input: {
   return hydrateCase(item);
 }
 
+export function createManagerCase(input: {
+  organizationId: string;
+  propertyId: string;
+  category: MaintenanceCase["category"];
+  priority: MaintenanceCase["priority"];
+  title: string;
+  description: string;
+  reporterName: string;
+}) {
+  const store = getStore();
+  const property = store.properties.find(
+    (p) => p.id === input.propertyId && p.organizationId === input.organizationId,
+  );
+  if (!property) throw new Error("Fastigheten hittades inte");
+  const now = nowIso();
+  const id = createId();
+  const item: MaintenanceCase = {
+    id,
+    createdAt: now,
+    updatedAt: now,
+    organizationId: input.organizationId,
+    reference: nextReference(),
+    propertyId: property.id,
+    category: input.category,
+    priority: input.priority,
+    status: "new",
+    title: input.title,
+    description: input.description,
+    discoveredAt: now,
+    stillOngoing: true,
+    reporterName: input.reporterName,
+    reporterPhone: "",
+    reporterEmail: "",
+    trackToken: createToken("tr"),
+  };
+  store.cases.push(item);
+  logActivity(id, "case_created", input.reporterName, "Ärendet skapades");
+  addMessage({
+    caseId: id,
+    organizationId: input.organizationId,
+    author: "owner",
+    authorName: input.reporterName,
+    text: input.description,
+  });
+  return hydrateCase(item);
+}
+
 /**
  * `label` is the already-translated status name. Activity text is stored as
  * written, so the caller passes the label in the organisation's language
@@ -1142,7 +1239,19 @@ export function updateOrganization(
 
 export function updateProfile(
   profileId: string,
-  patch: Partial<Pick<Profile, "fullName" | "phone" | "email" | "locale" | "marketingConsent">>,
+  patch: Partial<
+    Pick<
+      Profile,
+      | "fullName"
+      | "phone"
+      | "email"
+      | "locale"
+      | "marketingConsent"
+      | "notifyCases"
+      | "notifyCleaning"
+      | "notifyUrgent"
+    >
+  >,
 ) {
   const profile = getProfile(profileId);
   if (!profile) throw new Error("Profilen hittades inte");
@@ -1840,6 +1949,34 @@ export function getGuideAnalytics(organizationId: string, propertyId: string): G
     clicks: clicks.length,
     byPlace: [...byPlaceMap.values()].sort((a, b) => b.clicks - a.clicks),
     byKind: [...byKindMap.entries()].map(([kind, count]) => ({ kind, count })),
+  };
+}
+
+const CONTACT_CLICKS: GuideEventKind[] = ["click_whatsapp", "click_phone", "click_maps"];
+
+export function getPropertyTraffic(
+  organizationId: string,
+  propertyId: string,
+  days = 30,
+): PropertyTraffic {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const events = getStore().guideEvents.filter(
+    (item) =>
+      item.organizationId === organizationId &&
+      item.propertyId === propertyId &&
+      item.createdAt >= since,
+  );
+  const reports = getStore().cases.filter(
+    (item) =>
+      item.organizationId === organizationId &&
+      item.propertyId === propertyId &&
+      item.createdAt >= since,
+  ).length;
+  return {
+    scans: events.filter((item) => item.kind === "scan").length,
+    guideOpens: events.filter((item) => item.kind === "scan").length,
+    reports,
+    contactClicks: events.filter((item) => CONTACT_CLICKS.includes(item.kind)).length,
   };
 }
 

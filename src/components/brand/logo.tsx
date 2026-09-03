@@ -23,8 +23,8 @@ export function LogoQ({
   const { mark, pin } = fills[tone];
   return (
     <svg
-      viewBox="0 0 22 32"
-      className={className}
+      viewBox="0 0 22 22"
+      className={cn("overflow-visible", className)}
       fill="none"
       aria-hidden={!title}
       role={title ? "img" : undefined}
@@ -86,7 +86,7 @@ export function LogoWordmark({
       style={{ color: word }}
     >
       <span>homio</span>
-      <LogoQ tone={tone} className="mx-px h-[1.18em] w-[0.82em] translate-y-[0.22em]" />
+      <LogoQ tone={tone} className="mx-px h-[0.65em] w-[0.65em] translate-y-[0.05em] overflow-visible" />
       <span>o</span>
     </span>
   );

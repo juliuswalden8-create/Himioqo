@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { useRef } from "react";
 import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export interface FilterSelect {
   name: string;
@@ -11,8 +14,8 @@ export interface FilterSelect {
 }
 
 /**
- * Plain GET form, so filters live in the URL, survive a reload, can be shared
- * and work with JavaScript disabled.
+ * GET form so filters live in the URL. Selects submit immediately; search
+ * submits after a short pause so typing is not interrupted.
  */
 export function FilterBar({
   action,
@@ -21,9 +24,9 @@ export function FilterBar({
   searchPlaceholder,
   searchValue,
   selects,
-  applyLabel,
   clearLabel,
   hasFilters,
+  columnsClassName,
 }: {
   action: string;
   searchName?: string;
@@ -31,32 +34,63 @@ export function FilterBar({
   searchPlaceholder: string;
   searchValue: string;
   selects: FilterSelect[];
-  applyLabel: string;
+  applyLabel?: string;
   clearLabel: string;
   hasFilters: boolean;
+  columnsClassName?: string;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const timerRef = useRef<number | null>(null);
+
+  function submitNow() {
+    formRef.current?.requestSubmit();
+  }
+
+  function submitSearch() {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(submitNow, 350);
+  }
+
   return (
     <form
+      ref={formRef}
       action={action}
       method="get"
       className="rounded-2xl border border-border bg-white p-4 shadow-soft"
     >
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
-        <FormField label={searchLabel} htmlFor={`filter-${searchName}`} className="sm:col-span-2">
+      <button type="submit" className="sr-only">
+        {searchLabel}
+      </button>
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end",
+          columnsClassName,
+        )}
+      >
+        <FormField label={searchLabel} htmlFor={`filter-${searchName}`} className="space-y-1.5">
           <Input
             id={`filter-${searchName}`}
             name={searchName}
             type="search"
             defaultValue={searchValue}
             placeholder={searchPlaceholder}
+            className="h-11"
+            onChange={submitSearch}
           />
         </FormField>
         {selects.map((select) => (
-          <FormField key={select.name} label={select.label} htmlFor={`filter-${select.name}`}>
+          <FormField
+            key={select.name}
+            label={select.label}
+            htmlFor={`filter-${select.name}`}
+            className="space-y-1.5"
+          >
             <NativeSelect
               id={`filter-${select.name}`}
               name={select.name}
               defaultValue={select.value}
+              className="h-11"
+              onChange={submitNow}
             >
               {select.options.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -67,16 +101,13 @@ export function FilterBar({
           </FormField>
         ))}
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="secondary">
-          {applyLabel}
-        </Button>
-        {hasFilters ? (
+      {hasFilters ? (
+        <div className="mt-3">
           <Link href={action} className="text-sm font-medium text-navy-700 underline">
             {clearLabel}
           </Link>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </form>
   );
 }

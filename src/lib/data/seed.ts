@@ -521,7 +521,7 @@ export const attachments: Attachment[] = [
     updatedAt: daysAgo(8, 12, 0),
     caseId: "case_ac",
     kind: "reported",
-    url: "https://images.unsplash.com/photo-1631545806608-4c4f0b0f3d4a?w=1200&q=80",
+    url: "https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=1200&q=80",
     caption: "Inomhusenhet",
   },
   {
@@ -530,7 +530,7 @@ export const attachments: Attachment[] = [
     updatedAt: daysAgo(1, 10, 0),
     caseId: "case_ac",
     kind: "after",
-    url: "https://images.unsplash.com/photo-1631889993958-bf7903189614?w=1200&q=80",
+    url: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=1200&q=80",
     caption: "Byte av filter pågår",
   },
   {
@@ -548,7 +548,7 @@ export const attachments: Attachment[] = [
     updatedAt: daysAgo(22, 10, 0),
     caseId: "case_wifi",
     kind: "reported",
-    url: "https://images.unsplash.com/photo-1544197150-b99a5804d0ac?w=1200&q=80",
+    url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80",
     caption: "Router i hallen",
   },
   {
@@ -907,7 +907,7 @@ export const cleaningPhotos: CleaningPhoto[] = [
     updatedAt: todayAt(14, 10),
     jobId: "job_solsidan",
     kind: "after",
-    url: "https://images.unsplash.com/photo-1600489000023-0fc40c17a42e?w=1200&q=80",
+    url: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=1200&q=80",
     caption: "Kök efter",
   },
   {
@@ -943,7 +943,7 @@ export const cleaningPhotos: CleaningPhoto[] = [
     updatedAt: todayAt(14, 18),
     jobId: "job_solsidan",
     kind: "after",
-    url: "https://images.unsplash.com/photo-1616594039964-2ab2d1b2a1a4?w=1200&q=80",
+    url: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1200&q=80",
     caption: "Sovrum efter",
   },
   {

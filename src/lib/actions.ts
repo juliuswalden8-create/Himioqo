@@ -12,6 +12,7 @@ import {
   approveCase,
   authenticate,
   createProperty,
+  createManagerCase,
   getOrganizationLocale,
   getProfile,
   markInboxRead,
@@ -405,6 +406,41 @@ export async function markThreadReadAction(caseId: string) {
   revalidateAll();
 }
 
+export async function createManagerCaseAction(formData: FormData) {
+  const session = await requireSession();
+  const profile = getProfile(session.profileId);
+  const category = String(formData.get("category") ?? "other") as CaseCategory;
+  const priority = String(formData.get("priority") ?? "normal") as CasePriority;
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const propertyId = String(formData.get("propertyId") ?? "").trim();
+
+  if (!CASE_CATEGORIES.includes(category)) redirect("/app/cases/new");
+  if (!CASE_PRIORITIES.includes(priority)) redirect("/app/cases/new");
+  if (!title || !description || !propertyId) redirect("/app/cases/new");
+
+  const created = createManagerCase({
+    organizationId: session.organizationId,
+    propertyId,
+    category,
+    priority,
+    title: title.slice(0, 200),
+    description: description.slice(0, 5000),
+    reporterName: profile?.fullName || "Förvaltare",
+  });
+  const orgDict = await getDictionary(getOrganizationLocale(created.organizationId));
+  const urgent = created.priority === "urgent";
+  pushNotification({
+    organizationId: created.organizationId,
+    kind: urgent ? "case_urgent" : "case_new",
+    title: urgent ? orgDict.notifications.caseUrgent : orgDict.notifications.caseNew,
+    body: `${created.reference} · ${created.property.name}`,
+    href: `/app/cases/${created.id}`,
+  });
+  revalidateAll();
+  redirect(`/app/cases/${created.id}`);
+}
+
 export async function updateSettingsAction(formData: FormData) {
   const session = await requireSession();
   updateOrganization(session.organizationId, {
@@ -419,5 +455,17 @@ export async function updateSettingsAction(formData: FormData) {
     email: String(formData.get("email") ?? "").trim(),
   });
   revalidateAll();
-  return { ok: true as const };
+  redirect("/app/settings?saved=1");
+}
+
+export async function updateNotificationSettingsAction(formData: FormData) {
+  const session = await requireSession();
+  updateProfile(session.profileId, {
+    marketingConsent: formData.get("marketingConsent") === "on",
+    notifyCases: formData.get("notifyCases") === "on",
+    notifyCleaning: formData.get("notifyCleaning") === "on",
+    notifyUrgent: formData.get("notifyUrgent") === "on",
+  });
+  revalidateAll();
+  redirect("/app/settings?saved=1");
 }

@@ -24,7 +24,7 @@ export function QrPanel({
         {guestUrl}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <Button asChild>
+        <Button asChild variant="cta">
           <a href={downloadUrl} download>
             {dict.homes.download}
           </a>

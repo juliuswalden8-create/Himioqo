@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
+import { AppListRow } from "@/components/app-list-row";
 import { ReadyBadge } from "@/components/cleaning-status";
 import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
@@ -12,9 +13,9 @@ import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { interpolate } from "@/i18n/interpolate";
 import { createPropertyAction } from "@/lib/guide-actions";
 import {
-  getGuideAnalytics,
   getOrganization,
   getProfile,
+  getPropertyTraffic,
   listProperties,
   propertyFilterOptions,
 } from "@/lib/data/store";
@@ -65,6 +66,11 @@ export default async function PropertiesPage({
           description={interpolate(dict.filters.results, {
             count: String(properties.length),
           })}
+          actions={
+            <Button asChild variant="cta">
+              <a href="#create">{dict.homes.addHome}</a>
+            </Button>
+          }
         />
 
         <FilterBar
@@ -72,13 +78,13 @@ export default async function PropertiesPage({
           searchLabel={dict.filters.search}
           searchPlaceholder={dict.filters.searchProperties}
           searchValue={query}
-          applyLabel={dict.filters.apply}
           clearLabel={dict.filters.clear}
           hasFilters={hasFilters}
+          columnsClassName="lg:grid-cols-3"
           selects={[
             {
               name: "city",
-              label: dict.filters.property,
+              label: dict.filters.area,
               value: city,
               options: [
                 allOption,
@@ -100,42 +106,82 @@ export default async function PropertiesPage({
           ]}
         />
 
-        <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+        <section className="rounded-2xl border border-border bg-white px-5 shadow-soft">
           {properties.length ? (
-            <ul className="divide-y divide-border">
+            <ul>
               {properties.map((property) => {
-                const stats = getGuideAnalytics(session.organizationId, property.id);
+                const traffic = getPropertyTraffic(session.organizationId, property.id);
                 return (
-                  <li key={property.id}>
-                    <Link
-                      href={`/app/properties/${property.id}`}
-                      className="flex flex-wrap items-center justify-between gap-3 py-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-navy-800">{property.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {property.city} · {stats.scans} {dict.homes.scans.toLowerCase()} · {stats.clicks}{" "}
-                          {dict.homes.clicks.toLowerCase()}
-                        </p>
+                  <AppListRow
+                    key={property.id}
+                    href={`/app/properties/${property.id}`}
+                    badges={
+                      <div className="flex flex-col items-end gap-1.5">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {dict.dashboard.opsStatus}
+                          </span>
+                          <HealthBadge health={property.health} dict={dict} />
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {dict.dashboard.cleanStatus}
+                          </span>
+                          {property.guestReady ? (
+                            <ReadyBadge label={dict.dashboard.ready} />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">{dict.dashboard.notReady}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2">
-                        {property.guestReady ? (
-                          <ReadyBadge label={dict.dashboard.ready} />
-                        ) : null}
-                        <HealthBadge health={property.health} dict={dict} />
-                      </div>
-                    </Link>
-                  </li>
+                    }
+                    actions={
+                      <>
+                        <Button asChild size="sm" variant="secondary">
+                          <Link href={`/app/properties/${property.id}`}>{dict.homes.openHome}</Link>
+                        </Button>
+                        <Button asChild size="sm" variant="cta">
+                          <Link href={`/app/properties/${property.id}?tab=qr`}>{dict.dashboard.showQr}</Link>
+                        </Button>
+                        <Button asChild size="sm" variant="secondary">
+                          <Link href={`/app/properties/${property.id}?tab=info`}>
+                            {dict.homes.editGuide}
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" variant="secondary">
+                          <Link href={`/app/cases/new?propertyId=${property.id}`}>
+                            {dict.homes.createCase}
+                          </Link>
+                        </Button>
+                      </>
+                    }
+                  >
+                    <p className="truncate text-sm font-medium text-navy-800">{property.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {property.city} ·{" "}
+                      {interpolate(dict.homes.scans30, { count: String(traffic.scans) })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {interpolate(dict.homes.trafficHelp, {
+                        opens: String(traffic.guideOpens),
+                        reports: String(traffic.reports),
+                        contacts: String(traffic.contactClicks),
+                      })}
+                    </p>
+                  </AppListRow>
                 );
               })}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="py-5 text-sm text-muted-foreground">
               {hasFilters ? dict.filters.noResults : dict.homes.empty}
             </p>
           )}
         </section>
-        <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+        <section
+          id="create"
+          className="scroll-mt-24 rounded-2xl border border-border bg-white p-5 shadow-soft"
+        >
           <h2 className="text-sm font-semibold text-navy-800">{dict.homes.newHome}</h2>
           <form action={createPropertyAction} className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
             <FormField label={dict.propertyForm.name} htmlFor="name" required className="sm:col-span-2">
@@ -151,7 +197,9 @@ export default async function PropertiesPage({
               <Input id="tenantName" name="tenantName" required />
             </FormField>
             <div className="sm:col-span-2">
-              <Button type="submit">{dict.homes.newHome}</Button>
+              <Button type="submit" variant="cta">
+                {dict.homes.addHome}
+              </Button>
             </div>
           </form>
         </section>

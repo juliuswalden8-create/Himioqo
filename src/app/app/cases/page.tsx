@@ -1,21 +1,25 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
+import { AppListRow } from "@/components/app-list-row";
 import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
 import { PriorityBadge, StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getOrganization, getProfile, listCases, listProperties } from "@/lib/data/store";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatRelative } from "@/lib/format";
 import { interpolate } from "@/i18n/interpolate";
 import { categoryLabel, priorityLabel, statusLabel } from "@/lib/labels";
 import { getSession } from "@/lib/session";
 import {
   CASE_CATEGORIES,
   CASE_PRIORITIES,
+  CASE_SORTS,
   CASE_STATUSES,
   type CaseCategory,
   type CasePriority,
+  type CaseSort,
   type CaseStatus,
 } from "@/lib/types";
 
@@ -47,6 +51,9 @@ export default async function CasesPage({
   const status = pick<CaseStatus>(one("status"), CASE_STATUSES);
   const priority = pick<CasePriority>(one("priority"), CASE_PRIORITIES);
   const category = pick<CaseCategory>(one("category"), CASE_CATEGORIES);
+  const sortRaw = one("sort");
+  const sort: CaseSort =
+    sortRaw && (CASE_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as CaseSort) : "date";
   const propertyRaw = one("propertyId");
   const propertyId =
     propertyRaw && properties.some((p) => p.id === propertyRaw) ? propertyRaw : "all";
@@ -57,6 +64,7 @@ export default async function CasesPage({
     priority,
     category,
     propertyId,
+    sort,
   });
 
   const hasFilters =
@@ -64,7 +72,8 @@ export default async function CasesPage({
     status !== "all" ||
     priority !== "all" ||
     category !== "all" ||
-    propertyId !== "all";
+    propertyId !== "all" ||
+    sort !== "date";
 
   const allOption = { value: "all", label: dict.filters.all };
 
@@ -75,6 +84,11 @@ export default async function CasesPage({
         <PageHeader
           title={dict.dashboard.allCases}
           description={interpolate(dict.filters.results, { count: String(cases.length) })}
+          actions={
+            <Button asChild variant="cta">
+              <Link href="/app/cases/new">{dict.dashboard.createCase}</Link>
+            </Button>
+          }
         />
 
         <FilterBar
@@ -82,7 +96,6 @@ export default async function CasesPage({
           searchLabel={dict.filters.search}
           searchPlaceholder={dict.filters.searchCases}
           searchValue={query}
-          applyLabel={dict.filters.apply}
           clearLabel={dict.filters.clear}
           hasFilters={hasFilters}
           selects={[
@@ -131,36 +144,54 @@ export default async function CasesPage({
                 })),
               ],
             },
+            {
+              name: "sort",
+              label: dict.filters.sort,
+              value: sort,
+              options: [
+                { value: "date", label: dict.filters.sortDate },
+                { value: "priority", label: dict.filters.sortPriority },
+                { value: "status", label: dict.filters.sortStatus },
+              ],
+            },
           ]}
         />
 
-        <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+        <section className="rounded-2xl border border-border bg-white px-5 shadow-soft">
           {cases.length ? (
-            <ul className="divide-y divide-border">
-              {cases.map((item) => (
-                <li key={item.id}>
-                  <Link
+            <ul>
+              {cases.map((item) => {
+                const latest = item.activity[0];
+                return (
+                  <AppListRow
+                    key={item.id}
                     href={`/app/cases/${item.id}`}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3"
+                    badges={
+                      <>
+                        <PriorityBadge priority={item.priority} dict={dict} />
+                        <StatusBadge status={item.status} dict={dict} />
+                      </>
+                    }
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-navy-800">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.reference} · {item.property.name} ·{" "}
-                        {formatDate(item.createdAt, viewerLocale)}
-                        {item.contractor ? ` · ${item.contractor.name}` : ""}
+                    <p className="truncate text-sm font-medium text-navy-800">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.reference} · {item.property.name} ·{" "}
+                      {formatDate(item.createdAt, viewerLocale)}
+                      {" · "}
+                      {item.contractor?.name ?? dict.dashboard.unassigned}
+                    </p>
+                    {latest ? (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {dict.dashboard.lastActivity}: {latest.text} ·{" "}
+                        {formatRelative(latest.createdAt, viewerLocale)}
                       </p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      <PriorityBadge priority={item.priority} dict={dict} />
-                      <StatusBadge status={item.status} dict={dict} />
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                    ) : null}
+                  </AppListRow>
+                );
+              })}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="py-5 text-sm text-muted-foreground">
               {hasFilters ? dict.filters.noResults : dict.dashboard.emptyCases}
             </p>
           )}

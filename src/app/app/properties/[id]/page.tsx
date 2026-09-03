@@ -90,8 +90,8 @@ export default async function PropertyAdminPage({
           description={`${property.address}, ${property.city}`}
           actions={
             <>
-              <Button asChild variant="secondary">
-                <Link href={`/qr/${property.reportToken}`}>{dict.homes.qr}</Link>
+              <Button asChild variant="cta">
+                <Link href={`/qr/${property.reportToken}`}>{dict.dashboard.showQr}</Link>
               </Button>
               <Button asChild>
                 <a href={`/g/${property.reportToken}`} target="_blank" rel="noreferrer">

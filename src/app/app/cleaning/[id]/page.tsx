@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { CleaningStatusBadge, CopyLinkButton, ReadyBadge } from "@/components/cleaning-status";
+import { SafePhoto } from "@/components/safe-photo";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,7 +62,9 @@ export default async function CleaningDetailPage({
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              {job.property.guestReady ? <ReadyBadge label={dict.dashboard.ready} /> : null}
+              {job.status === "completed" || job.status === "approved" ? null : job.property.guestReady ? (
+                <ReadyBadge label={dict.dashboard.ready} />
+              ) : null}
               <CleaningStatusBadge status={job.status} dict={dict} />
             </div>
           </div>
@@ -75,7 +78,7 @@ export default async function CleaningDetailPage({
           </div>
         </section>
 
-        <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+        <section id="checklist" className="scroll-mt-24 rounded-2xl border border-border bg-white p-5 shadow-soft">
           <h2 className="text-sm font-semibold text-navy-800">{dict.cleaning.checklist}</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {interpolate(dict.cleaning.points, {
@@ -99,22 +102,31 @@ export default async function CleaningDetailPage({
           </ul>
         </section>
 
-        {job.photos.length ? (
-          <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
-            <h2 className="text-sm font-semibold text-navy-800">{dict.cleaning.photos}</h2>
+        <section
+          id="documentation"
+          className="scroll-mt-24 rounded-2xl border border-border bg-white p-5 shadow-soft"
+        >
+          <h2 className="text-sm font-semibold text-navy-800">{dict.cleaning.photos}</h2>
+          {job.photos.length ? (
             <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {job.photos.map((photo) => (
                 <li key={photo.id}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt={photo.caption ?? ""} className="h-24 w-full rounded-lg object-cover" />
+                  <SafePhoto
+                    src={photo.url}
+                    alt={photo.caption ?? (photo.kind === "before" ? dict.dashboard.before : dict.dashboard.after)}
+                    fallbackLabel={dict.dashboard.photoFallback}
+                    className="h-24 w-full rounded-lg object-cover"
+                  />
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {photo.kind === "before" ? dict.dashboard.before : dict.dashboard.after}
                   </p>
                 </li>
               ))}
             </ul>
-          </section>
-        ) : null}
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">{dict.dashboard.noPhotos}</p>
+          )}
+        </section>
 
         {job.issues.length ? (
           <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">

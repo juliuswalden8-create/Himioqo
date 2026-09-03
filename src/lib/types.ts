@@ -118,6 +118,9 @@ export interface Profile extends BaseRecord {
   emailVerifiedAt?: string;
   onboardingCompletedAt?: string;
   passwordHash?: string;
+  notifyCases?: boolean;
+  notifyCleaning?: boolean;
+  notifyUrgent?: boolean;
 }
 
 export interface VerificationToken extends BaseRecord {
@@ -321,6 +324,13 @@ export interface DashboardStats {
   openCases: number;
   resolvedThisMonth: number;
   urgentCases: number;
+  deltas: {
+    propertyCount: number;
+    newCases: number;
+    openCases: number;
+    resolvedThisMonth: number;
+    urgentCases: number;
+  };
 }
 
 export interface MonthDatum {
@@ -358,12 +368,16 @@ export interface InboxThread {
   unread: boolean;
 }
 
+export const CASE_SORTS = ["date", "priority", "status"] as const;
+export type CaseSort = (typeof CASE_SORTS)[number];
+
 export interface CaseFilters {
   status?: CaseStatus | "all";
   priority?: CasePriority | "all";
   propertyId?: string | "all";
   category?: CaseCategory | "all";
   query?: string;
+  sort?: CaseSort;
 }
 
 export interface PropertyFilters {
@@ -591,4 +605,11 @@ export interface GuideAnalytics {
     sponsored: boolean;
   }[];
   byKind: { kind: GuideEventKind; count: number }[];
+}
+
+export interface PropertyTraffic {
+  scans: number;
+  guideOpens: number;
+  reports: number;
+  contactClicks: number;
 }

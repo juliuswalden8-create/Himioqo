@@ -2,12 +2,12 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-ocean: #16383f;
-  --color-ocean-hover: #0f282d;
-  --color-ivory: #f7f4ed;
-  --color-terracotta: #b64a32;
-  --color-terracotta-hover: #963a27;
-  --color-terracotta-soft: #e8c4b4;
+  --color-ocean: #173f43;
+  --color-ocean-hover: #102e32;
+  --color-ivory: #f7f3ec;
+  --color-terracotta: #e7795b;
+  --color-terracotta-hover: #d4664a;
+  --color-terracotta-soft: #f3cfc4;
   --color-sage: #dde7df;
   --color-graphite: #1d292b;
   --color-muted-green: #667573;
@@ -20,15 +20,15 @@
   --color-navy-500: #667573;
   --color-navy-600: #4a5c5a;
   --color-navy-700: #2a3f42;
-  --color-navy-800: #16383f;
-  --color-navy-900: #0f282d;
+  --color-navy-800: #173f43;
+  --color-navy-900: #102e32;
 
   --color-green-50: #eef8f3;
   --color-green-100: #d5eee2;
   --color-green-200: #addcc6;
   --color-green-300: #74c19e;
   --color-green-400: #3fa87a;
-  --color-green-500: #2f9e6a;
+  --color-green-500: #2e9b70;
   --color-green-600: #247c54;
   --color-green-700: #1c6142;
 
@@ -37,30 +37,30 @@
   --color-sand-200: #e4e7e2;
   --color-sand-300: #cfd6d0;
 
-  --color-forest: #16383f;
+  --color-forest: #173f43;
   --color-forest-600: #1f4a52;
-  --color-teal-700: #16383f;
+  --color-teal-700: #173f43;
 
-  --color-canvas: #f7f4ed;
-  --color-background: #f7f4ed;
+  --color-canvas: #f7f3ec;
+  --color-background: #f7f3ec;
   --color-foreground: #1d292b;
   --color-card: #ffffff;
   --color-card-foreground: #1d292b;
   --color-popover: #ffffff;
   --color-popover-foreground: #1d292b;
-  --color-primary: #16383f;
+  --color-primary: #173f43;
   --color-primary-foreground: #ffffff;
   --color-secondary: #dde7df;
-  --color-secondary-foreground: #16383f;
+  --color-secondary-foreground: #173f43;
   --color-muted: #dde7df;
   --color-muted-foreground: #667573;
   --color-accent: #dde7df;
-  --color-accent-foreground: #16383f;
-  --color-accent-hover: #963a27;
+  --color-accent-foreground: #173f43;
+  --color-accent-hover: #d4664a;
   --color-surface: #ffffff;
   --color-text: #1d292b;
   --color-text-muted: #667573;
-  --color-destructive: #dc3b3b;
+  --color-destructive: #dc4c4c;
   --color-destructive-foreground: #ffffff;
   --color-border: #dde3df;
   --color-input: #dde3df;
@@ -74,12 +74,12 @@
     color-mix(in srgb, var(--color-terracotta) 12%, transparent);
   --shadow-field-error: 0 0 0 4px rgba(220, 59, 59, 0.12);
 
-  --color-status-new: #2f6fed;
+  --color-status-new: #3979f6;
   --color-status-waiting: #e07a2f;
-  --color-status-assigned: #7b5cbf;
+  --color-status-assigned: #896bd8;
   --color-status-progress: #c9a227;
-  --color-status-done: #2f9e6a;
-  --color-status-urgent: #dc3b3b;
+  --color-status-done: #2e9b70;
+  --color-status-urgent: #dc4c4c;
 
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", sans-serif;

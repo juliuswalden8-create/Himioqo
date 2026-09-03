@@ -8,6 +8,7 @@ import {
   contractorRespond,
   contractorUpdateStatus,
   createCleaningJob,
+  createManagerCase,
   createOwnerAccess,
   createProperty,
   createPilotLead,
@@ -19,6 +20,7 @@ import {
   getOwnerView,
   getProperty,
   getPropertyByToken,
+  getPropertyTraffic,
   listCases,
   listCleaners,
   listContractors,
@@ -573,5 +575,59 @@ describe("pilot leads", () => {
     if (!parsed.ok) return;
     expect(parsed.data.accountType).toBe("private");
     expect(parsed.data.company).toBe("");
+  });
+});
+
+describe("manager dashboard helpers", () => {
+  it("sorts cases by priority with urgent first", () => {
+    const sorted = listCases(ORG, { sort: "priority" });
+    const ranks = { urgent: 0, soon: 1, normal: 2, low: 3 };
+    for (let i = 1; i < sorted.length; i += 1) {
+      expect(ranks[sorted[i]!.priority]).toBeGreaterThanOrEqual(ranks[sorted[i - 1]!.priority]);
+    }
+  });
+
+  it("lets a manager create a case for a home in their organisation only", () => {
+    const home = listProperties(ORG)[0];
+    expect(home).toBeDefined();
+    const created = createManagerCase({
+      organizationId: ORG,
+      propertyId: home!.id,
+      category: "other",
+      priority: "normal",
+      title: "Manager case",
+      description: "Created from the dashboard.",
+      reporterName: MANAGER,
+    });
+    expect(created.organizationId).toBe(ORG);
+    expect(created.status).toBe("new");
+    expect(() =>
+      createManagerCase({
+        organizationId: "org_intruder",
+        propertyId: home!.id,
+        category: "other",
+        priority: "normal",
+        title: "Intruder",
+        description: "Should fail.",
+        reporterName: "Nope",
+      }),
+    ).toThrow();
+  });
+
+  it("counts QR scans and reports for the last 30 days", () => {
+    const home = listProperties(ORG).find((p) => p.name === "Villa Solsidan");
+    expect(home).toBeDefined();
+    const traffic = getPropertyTraffic(ORG, home!.id);
+    expect(traffic.scans).toBeGreaterThan(0);
+    expect(traffic.guideOpens).toBe(traffic.scans);
+    expect(getDashboardStats(ORG).deltas).toEqual(
+      expect.objectContaining({
+        propertyCount: expect.any(Number),
+        newCases: expect.any(Number),
+        openCases: expect.any(Number),
+        resolvedThisMonth: expect.any(Number),
+        urgentCases: expect.any(Number),
+      }),
+    );
   });
 });
