@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProgressSteps } from "@/components/progress-steps";
@@ -23,6 +24,10 @@ import {
 import { requestUrl } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function OnboardingPage({
   searchParams,

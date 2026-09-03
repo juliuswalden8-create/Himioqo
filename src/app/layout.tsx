@@ -5,6 +5,7 @@ import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { siteOrigin } from "@/lib/utils";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -20,10 +21,16 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: m.title,
     description: m.description,
-    metadataBase: new URL("https://homioqo.se"),
+    metadataBase: new URL(siteOrigin()),
+    robots: { index: true, follow: true },
+    alternates: { canonical: "/" },
+    verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+      : undefined,
     openGraph: {
       title: m.ogTitle,
       description: m.ogDescription,
+      url: "/",
       locale,
       type: "website",
       images: [{ url: "/landing/hero-scan.jpg", alt: dict.marketing.hero.imageAlt }],

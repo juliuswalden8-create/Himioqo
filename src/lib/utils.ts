@@ -117,9 +117,22 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+const PRODUCTION_SITE = "https://homioqo.vercel.app";
+
+/** Public origin for QR links, emails, sitemap and metadata. */
+export function siteOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (process.env.VERCEL_ENV === "production") {
+    return explicit && !explicit.includes("localhost") ? explicit : PRODUCTION_SITE;
+  }
+  if (explicit) return explicit;
+  const vercelProd = process.env.VERCEL_PROJECT_PRODUCTION_URL?.replace(/\/$/, "");
+  if (vercelProd) return `https://${vercelProd}`;
+  return "http://localhost:3000";
+}
+
 export function appUrl(path = ""): string {
-  const base = (
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ).replace(/\/$/, "");
+  const base = siteOrigin();
+  if (!path) return base;
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }

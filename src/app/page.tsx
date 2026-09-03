@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { MarketingSite } from "@/components/landing/marketing-site";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { resolveAudience } from "@/lib/audience";
+import { siteOrigin } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -31,5 +32,24 @@ export default async function LandingPage({
   const dict = await getDictionary(locale);
   const initialAudience = resolveAudience((await searchParams).segment);
 
-  return <MarketingSite dict={dict} locale={locale} initialAudience={initialAudience} />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Homioqo",
+    url: siteOrigin(),
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description: dict.marketing.meta.description,
+    inLanguage: locale,
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <MarketingSite dict={dict} locale={locale} initialAudience={initialAudience} />
+    </>
+  );
 }
