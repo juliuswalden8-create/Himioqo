@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export interface FilterSelect {
   name: string;
@@ -41,9 +41,8 @@ export function FilterBar({
       method="get"
       className="rounded-2xl border border-border bg-white p-4 shadow-soft"
     >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor={`filter-${searchName}`}>{searchLabel}</Label>
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+        <FormField label={searchLabel} htmlFor={`filter-${searchName}`} className="sm:col-span-2">
           <Input
             id={`filter-${searchName}`}
             name={searchName}
@@ -51,26 +50,24 @@ export function FilterBar({
             defaultValue={searchValue}
             placeholder={searchPlaceholder}
           />
-        </div>
+        </FormField>
         {selects.map((select) => (
-          <div key={select.name} className="space-y-1.5">
-            <Label htmlFor={`filter-${select.name}`}>{select.label}</Label>
-            <select
+          <FormField key={select.name} label={select.label} htmlFor={`filter-${select.name}`}>
+            <NativeSelect
               id={`filter-${select.name}`}
               name={select.name}
               defaultValue={select.value}
-              className="h-11 w-full rounded-xl border border-border bg-white px-3 text-sm text-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {select.options.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
-          </div>
+            </NativeSelect>
+          </FormField>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button type="submit" variant="secondary">
           {applyLabel}
         </Button>

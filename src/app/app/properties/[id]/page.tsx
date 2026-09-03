@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { FormField, NativeCheckbox, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -260,28 +261,26 @@ export default async function PropertyAdminPage({
                         name="trackingCode"
                         defaultValue={item.place.monetization.trackingCode ?? ""}
                       />
-                      <label className="flex items-center gap-2 text-sm text-navy-800">
-                        <input
-                          type="checkbox"
+                      <label className="flex items-center gap-3 text-[15px] text-ocean">
+                        <NativeCheckbox
                           name="sponsored"
                           defaultChecked={item.place.sponsored}
                         />
                         {dict.homes.sponsored}
                       </label>
-                      <div>
-                        <Label>{dict.homes.monetization}</Label>
-                        <select
+                      <FormField label={dict.homes.monetization} htmlFor={`monetization-${item.id}`}>
+                        <NativeSelect
+                          id={`monetization-${item.id}`}
                           name="monetization"
                           defaultValue={item.place.monetization.kind}
-                          className="mt-1 h-11 w-full rounded-xl border border-input bg-white px-3 text-sm"
                         >
                           {(Object.keys(dict.homes.monetizationKinds) as MonetizationKind[]).map((kind) => (
                             <option key={kind} value={kind}>
                               {dict.homes.monetizationKinds[kind]}
                             </option>
                           ))}
-                        </select>
-                      </div>
+                        </NativeSelect>
+                      </FormField>
                       <div className="sm:col-span-2">
                         <Button type="submit" size="sm">
                           {dict.homes.save}
@@ -297,16 +296,13 @@ export default async function PropertyAdminPage({
               <form action={copyPlacesAction} className="rounded-2xl border border-border bg-white p-5 shadow-soft">
                 <h2 className="text-sm font-semibold text-navy-800">{dict.homes.copyFrom}</h2>
                 <input type="hidden" name="propertyId" value={property.id} />
-                <select
-                  name="fromPropertyId"
-                  className="mt-3 h-11 w-full rounded-xl border border-input bg-white px-3 text-sm"
-                >
+                <NativeSelect name="fromPropertyId" className="mt-3">
                   {others.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <Button type="submit" className="mt-3">
                   {dict.homes.copy}
                 </Button>
@@ -316,42 +312,35 @@ export default async function PropertyAdminPage({
             <form action={assignPlaceAction} className="rounded-2xl border border-border bg-white p-5 shadow-soft">
               <h2 className="text-sm font-semibold text-navy-800">{dict.homes.assignExisting}</h2>
               <input type="hidden" name="propertyId" value={property.id} />
-              <select
-                name="placeId"
-                className="mt-3 h-11 w-full rounded-xl border border-input bg-white px-3 text-sm"
-              >
+              <NativeSelect name="placeId" className="mt-3">
                 {partners.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <Button type="submit" className="mt-3" disabled={!partners.length}>
                 {dict.homes.assignExisting}
               </Button>
             </form>
 
-            <form action={createPlaceAction} className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-soft">
+            <form action={createPlaceAction} className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-soft">
               <h2 className="text-sm font-semibold text-navy-800">{dict.homes.addPlace}</h2>
               <input type="hidden" name="propertyId" value={property.id} />
-              <div>
-                <Label>{dict.homes.category}</Label>
-                <select
-                  name="category"
-                  className="mt-1 h-11 w-full rounded-xl border border-input bg-white px-3 text-sm"
-                >
+              <FormField label={dict.homes.category} htmlFor="place-category">
+                <NativeSelect id="place-category" name="category">
                   {PLACE_CATEGORIES.map((category) => (
                     <option key={category} value={category}>
                       {dict.guide.categories[category]}
                     </option>
                   ))}
-                </select>
-              </div>
+                </NativeSelect>
+              </FormField>
               <Field label={dict.homes.name} name="name" required />
               <Bilingual label={dict.homes.description} name="description" sv="" en="" dict={dict} area />
               <Field label={dict.homes.image} name="imageUrl" />
               <Field label={dict.homes.address} name="address" />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
                 <Field label={dict.homes.lat} name="lat" />
                 <Field label={dict.homes.lng} name="lng" />
                 <Field label={dict.homes.hours} name="hours" />
@@ -363,23 +352,19 @@ export default async function PropertyAdminPage({
                 <Field label={dict.homes.trackingCode} name="trackingCode" />
               </div>
               <Bilingual label={dict.homes.discountLabel} name="discountLabel" sv="" en="" dict={dict} />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="sponsored" />
+              <label className="flex items-center gap-3 text-[15px] text-ocean">
+                <NativeCheckbox name="sponsored" />
                 {dict.homes.sponsored}
               </label>
-              <div>
-                <Label>{dict.homes.monetization}</Label>
-                <select
-                  name="monetization"
-                  className="mt-1 h-11 w-full rounded-xl border border-input bg-white px-3 text-sm"
-                >
+              <FormField label={dict.homes.monetization} htmlFor="place-monetization">
+                <NativeSelect id="place-monetization" name="monetization">
                   {(Object.keys(dict.homes.monetizationKinds) as MonetizationKind[]).map((kind) => (
                     <option key={kind} value={kind}>
                       {dict.homes.monetizationKinds[kind]}
                     </option>
                   ))}
-                </select>
-              </div>
+                </NativeSelect>
+              </FormField>
               <Button type="submit">{dict.homes.addPlace}</Button>
             </form>
           </div>
@@ -523,10 +508,9 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <div>
-      <Label htmlFor={name}>{label}</Label>
+    <FormField label={label} htmlFor={name} required={required}>
       <Input id={name} name={name} defaultValue={defaultValue} required={required} />
-    </div>
+    </FormField>
   );
 }
 
@@ -547,19 +531,13 @@ function Bilingual({
 }) {
   const Control = area ? Textarea : Input;
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div>
-        <Label>
-          {label} · {dict.homes.swedish}
-        </Label>
-        <Control name={`${name}Sv`} defaultValue={sv} className="mt-1" />
-      </div>
-      <div>
-        <Label>
-          {label} · {dict.homes.english}
-        </Label>
-        <Control name={`${name}En`} defaultValue={en} className="mt-1" />
-      </div>
+    <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      <FormField label={`${label} · ${dict.homes.swedish}`} htmlFor={`${name}Sv`}>
+        <Control id={`${name}Sv`} name={`${name}Sv`} defaultValue={sv} />
+      </FormField>
+      <FormField label={`${label} · ${dict.homes.english}`} htmlFor={`${name}En`}>
+        <Control id={`${name}En`} name={`${name}En`} defaultValue={en} />
+      </FormField>
     </div>
   );
 }

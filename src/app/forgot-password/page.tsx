@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { FormError, FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { forgotPasswordAction } from "@/lib/actions";
 
 export default function ForgotPasswordPage() {
@@ -27,12 +27,11 @@ export default function ForgotPasswordPage() {
             Ange din e-post så skickar vi en länk om kontot finns.
           </p>
           <form action={action} className="mt-6 space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-post</Label>
+            <FormField label="E-post" htmlFor="email" required>
               <Input id="email" name="email" type="email" required />
-            </div>
+            </FormField>
             {state?.error ? (
-              <p className="text-sm text-destructive">Ange en giltig e-postadress.</p>
+              <FormError>Ange en giltig e-postadress.</FormError>
             ) : null}
             {state && "ok" in state ? (
               <p className="text-sm text-green-700">Om adressen finns hos oss har vi skickat ett mejl.</p>

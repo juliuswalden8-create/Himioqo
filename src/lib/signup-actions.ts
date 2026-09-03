@@ -12,7 +12,7 @@ import {
   RESEND_LIMIT,
   RESEND_WINDOW_MS,
 } from "@/lib/constants";
-import { randomToken } from "@/lib/crypto";
+import { clearAccountSnapshot, saveAccountSnapshot } from "@/lib/account-snapshot";
 import {
   addContractor,
   bookOnboarding,
@@ -34,8 +34,10 @@ import { sendAdminSignupNotice, sendWelcomeEmail } from "@/lib/email/send";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { normalizeLocale } from "@/lib/i18n/languages";
 import { validatePhone, toE164 } from "@/lib/phone";
+import { getPendingSignup } from "@/lib/pending";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestOrigin } from "@/lib/request-origin";
+import { encodeSignupTicket, ticketFromProfile } from "@/lib/signup-ticket";
 import { isValidEmail } from "@/lib/utils";
 import { clearSession, getSession, requireSession, setSession } from "@/lib/session";
 import type { CountryCode } from "libphonenumber-js";
@@ -47,9 +49,9 @@ async function clientKey() {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 }
 
-async function setPendingCookies(profileId: string, email: string) {
+async function setPendingCookies(token: string, email: string) {
   const jar = await cookies();
-  jar.set(PENDING_SIGNUP_COOKIE, profileId, {
+  jar.set(PENDING_SIGNUP_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -66,24 +68,28 @@ async function setPendingCookies(profileId: string, email: string) {
 async function issueAndSend(profileId: string) {
   const profile = getProfile(profileId);
   if (!profile) throw new Error("missing");
-  const token = randomToken();
-  createVerificationToken(profileId, token);
+  const org = getOrganization(profile.organizationId);
+  if (!org) throw new Error("missing");
+  const token = encodeSignupTicket(ticketFromProfile(profile, org));
+  createVerificationToken(profile.id, token);
   const dict = await getDictionary(profile.locale);
-  const verifyUrl = `${await getRequestOrigin()}/verify/${token}`;
+  const origin = await getRequestOrigin();
+  const verifyUrl = `${origin}/verify/${token}`;
   await sendWelcomeEmail({
     to: profile.email,
     dict,
     firstName: profile.firstName,
     verifyUrl,
     locale: profile.locale,
+    logoUrl: `${origin}/brand/logo-email.png`,
   });
   await sendAdminSignupNotice({
     dict,
-    companyName: getOrganization(profile.organizationId)?.name ?? "",
+    companyName: org.name,
     emailMasked: profile.email.replace(/^(.).+(@.*)$/, "$1***$2"),
     locale: profile.locale,
   });
-  return verifyUrl;
+  return { token, verifyUrl };
 }
 
 export async function setLocaleAction(locale: string) {
@@ -169,38 +175,34 @@ export async function registerTrialAction(_prev: { error?: string } | null, form
 
   const jar = await cookies();
   jar.set(LOCALE_COOKIE, locale, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
-  await issueAndSend(profile.id);
-  await setPendingCookies(profile.id, profile.email);
+  const issued = await issueAndSend(profile.id);
+  await setPendingCookies(issued.token, profile.email);
   redirect("/register/check-email?sent=1");
 }
 
 export async function resendVerificationAction() {
-  const jar = await cookies();
-  const profileId = jar.get(PENDING_SIGNUP_COOKIE)?.value;
-  if (!profileId) return { error: "generic" };
-  const profile = getProfile(profileId);
-  if (!profile) return { error: "generic" };
+  const pending = await getPendingSignup();
+  if (!pending) return { error: "generic" };
   const ip = await clientKey();
   const byIp = rateLimit(`resend-ip:${ip}`, RESEND_LIMIT, RESEND_WINDOW_MS);
-  const byEmail = rateLimit(`resend-em:${profile.email}`, RESEND_LIMIT, RESEND_WINDOW_MS);
+  const byEmail = rateLimit(`resend-em:${pending.profile.email}`, RESEND_LIMIT, RESEND_WINDOW_MS);
   if (!byIp.ok || !byEmail.ok) return { error: "rate" };
-  await issueAndSend(profile.id);
-  await setPendingCookies(profile.id, profile.email);
+  const issued = await issueAndSend(pending.profile.id);
+  await setPendingCookies(issued.token, pending.profile.email);
   return { ok: true as const };
 }
 
 export async function changeSignupEmailAction(_prev: { error?: string } | null, formData: FormData) {
-  const jar = await cookies();
-  const profileId = jar.get(PENDING_SIGNUP_COOKIE)?.value;
-  if (!profileId) return { error: "generic" };
+  const pending = await getPendingSignup();
+  if (!pending) return { error: "generic" };
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!isValidEmail(email)) return { error: "email" };
   const ip = await clientKey();
   if (!rateLimit(`change:${ip}`, RESEND_LIMIT, RESEND_WINDOW_MS).ok) return { error: "rate" };
   try {
-    const profile = updateSignupEmail(profileId, email);
-    await issueAndSend(profile.id);
-    await setPendingCookies(profile.id, profile.email);
+    const profile = updateSignupEmail(pending.profile.id, email);
+    const issued = await issueAndSend(profile.id);
+    await setPendingCookies(issued.token, profile.email);
   } catch (error) {
     return { error: error instanceof Error && error.message === "exists" ? "exists" : "generic" };
   }
@@ -209,13 +211,16 @@ export async function changeSignupEmailAction(_prev: { error?: string } | null, 
 
 export async function setPasswordAfterVerifyAction(_prev: { error?: string } | null, formData: FormData) {
   const profileId = String(formData.get("profileId") ?? "");
+  const token = String(formData.get("token") ?? "");
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
   if (password.length < 8) return { error: "password" };
   if (password !== confirm) return { error: "mismatch" };
-  const profile = getProfile(profileId);
+  const profile = (token ? consumeVerificationToken(token) : null) ?? getProfile(profileId);
   if (!profile?.emailVerifiedAt) return { error: "token" };
-  setProfilePassword(profileId, password);
+  setProfilePassword(profile.id, password);
+  const updated = getProfile(profile.id);
+  if (updated) await saveAccountSnapshot(updated);
   await setSession({ profileId: profile.id, organizationId: profile.organizationId });
   redirect("/onboarding");
 }
@@ -286,6 +291,7 @@ export async function exportDataAction() {
 export async function deleteAccountAction() {
   const session = await requireSession();
   deleteAccount(session.organizationId);
+  await clearAccountSnapshot();
   await clearSession();
   redirect("/");
 }
@@ -298,8 +304,7 @@ export async function consumeFlashEmail() {
 }
 
 export async function pendingProfileId() {
-  const jar = await cookies();
-  return jar.get(PENDING_SIGNUP_COOKIE)?.value ?? null;
+  return (await getPendingSignup())?.profile.id ?? null;
 }
 
 export async function devVerifyLink(profileId: string) {

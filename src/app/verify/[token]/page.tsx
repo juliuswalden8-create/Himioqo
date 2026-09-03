@@ -10,9 +10,15 @@ export default async function VerifyPage({
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = await params;
+  const { token: rawToken } = await params;
   const locale = await getLocale();
   const dict = await getDictionary(locale);
+  let token = rawToken;
+  try {
+    token = decodeURIComponent(rawToken);
+  } catch {
+    token = rawToken;
+  }
   const profile = consumeVerificationToken(token);
 
   return (
@@ -24,7 +30,7 @@ export default async function VerifyPage({
             <>
               <h1 className="text-2xl font-semibold text-navy-800">{dict.verify.title}</h1>
               <p className="mt-2 text-sm text-muted-foreground">{dict.verify.body}</p>
-              <PasswordSetupForm dict={dict} profileId={profile.id} />
+              <PasswordSetupForm dict={dict} profileId={profile.id} token={token} />
             </>
           ) : (
             <>

@@ -3,8 +3,8 @@ import { AppHeader } from "@/components/app-header";
 import { PageHeader } from "@/components/page-header";
 import { CleaningStatusBadge, ReadyBadge } from "@/components/cleaning-status";
 import { Button } from "@/components/ui/button";
+import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
 import {
@@ -88,58 +88,56 @@ export default async function CleaningPage() {
         <section className="grid gap-6 lg:grid-cols-2">
           <form
             action={createCleaningJobAction}
-            className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-soft"
+            className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-soft"
           >
             <h2 className="text-sm font-semibold text-navy-800">{dict.cleaning.create}</h2>
             <input type="hidden" name="labels" value={labels} />
-            <Label htmlFor="propertyId">{dict.cleaning.property}</Label>
-            <select
-              id="propertyId"
-              name="propertyId"
-              required
-              className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm"
-            >
-              {properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.name}
-                </option>
-              ))}
-            </select>
-            <Label htmlFor="cleanerId">{dict.cleaning.cleaner}</Label>
-            <select
-              id="cleanerId"
-              name="cleanerId"
-              className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm"
-            >
-              <option value="">—</option>
-              {cleaners.map((cleaner) => (
-                <option key={cleaner.id} value={cleaner.id}>
-                  {cleaner.name}
-                </option>
-              ))}
-            </select>
-            <Label htmlFor="scheduledAt">{dict.cleaning.when}</Label>
-            <Input id="scheduledAt" name="scheduledAt" type="datetime-local" />
-            <Label htmlFor="instructions">{dict.cleaning.instructions}</Label>
-            <Textarea id="instructions" name="instructions" />
-            <p className="text-xs text-muted-foreground">{dict.cleaning.noAccount}</p>
+            <FormField label={dict.cleaning.property} htmlFor="propertyId" required>
+              <NativeSelect id="propertyId" name="propertyId" required>
+                {properties.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </FormField>
+            <FormField label={dict.cleaning.cleaner} htmlFor="cleanerId">
+              <NativeSelect id="cleanerId" name="cleanerId">
+                <option value="">—</option>
+                {cleaners.map((cleaner) => (
+                  <option key={cleaner.id} value={cleaner.id}>
+                    {cleaner.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </FormField>
+            <FormField label={dict.cleaning.when} htmlFor="scheduledAt">
+              <Input id="scheduledAt" name="scheduledAt" type="datetime-local" />
+            </FormField>
+            <FormField label={dict.cleaning.instructions} htmlFor="instructions" hint={dict.cleaning.noAccount}>
+              <Textarea id="instructions" name="instructions" />
+            </FormField>
             <Button type="submit">{dict.cleaning.assign}</Button>
           </form>
 
           <div className="space-y-6">
             <form
               action={addCleanerAction}
-              className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-soft"
+              className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-soft"
             >
               <h2 className="text-sm font-semibold text-navy-800">{dict.cleaning.addCleaner}</h2>
-              <Label htmlFor="name">{dict.cleaning.cleanerName}</Label>
-              <Input id="name" name="name" required />
-              <Label htmlFor="contactName">{dict.cleaning.contact}</Label>
-              <Input id="contactName" name="contactName" required />
-              <Label htmlFor="phone">{dict.contractorForm.phone}</Label>
-              <Input id="phone" name="phone" />
-              <Label htmlFor="email">{dict.contractorForm.email}</Label>
-              <Input id="email" name="email" type="email" />
+              <FormField label={dict.cleaning.cleanerName} htmlFor="name" required>
+                <Input id="name" name="name" required />
+              </FormField>
+              <FormField label={dict.cleaning.contact} htmlFor="contactName" required>
+                <Input id="contactName" name="contactName" required />
+              </FormField>
+              <FormField label={dict.contractorForm.phone} htmlFor="phone">
+                <Input id="phone" name="phone" />
+              </FormField>
+              <FormField label={dict.contractorForm.email} htmlFor="email">
+                <Input id="email" name="email" type="email" />
+              </FormField>
               <Button type="submit" variant="secondary">
                 {dict.cleaning.addCleaner}
               </Button>
@@ -147,40 +145,38 @@ export default async function CleaningPage() {
 
             <form
               action={saveScheduleAction}
-              className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-soft"
+              className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-soft"
             >
               <h2 className="text-sm font-semibold text-navy-800">{dict.cleaning.schedule}</h2>
-              <Label htmlFor="sch-property">{dict.cleaning.property}</Label>
-              <select
-                id="sch-property"
-                name="propertyId"
-                required
-                className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm"
+              <FormField label={dict.cleaning.property} htmlFor="sch-property" required>
+                <NativeSelect id="sch-property" name="propertyId" required>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </FormField>
+              <FormField label={dict.cleaning.cleaner} htmlFor="sch-cleaner">
+                <NativeSelect id="sch-cleaner" name="cleanerId">
+                  <option value="">—</option>
+                  {cleaners.map((cleaner) => (
+                    <option key={cleaner.id} value={cleaner.id}>
+                      {cleaner.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </FormField>
+              <FormField label={dict.cleaning.offset} htmlFor="offsetHours">
+                <Input id="offsetHours" name="offsetHours" type="number" min={0} defaultValue={2} />
+              </FormField>
+              <FormField
+                label={dict.cleaning.instructions}
+                htmlFor="sch-instructions"
+                hint={dict.cleaning.afterCheckout}
               >
-                {properties.map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </select>
-              <Label htmlFor="sch-cleaner">{dict.cleaning.cleaner}</Label>
-              <select
-                id="sch-cleaner"
-                name="cleanerId"
-                className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm"
-              >
-                <option value="">—</option>
-                {cleaners.map((cleaner) => (
-                  <option key={cleaner.id} value={cleaner.id}>
-                    {cleaner.name}
-                  </option>
-                ))}
-              </select>
-              <Label htmlFor="offsetHours">{dict.cleaning.offset}</Label>
-              <Input id="offsetHours" name="offsetHours" type="number" min={0} defaultValue={2} />
-              <Label htmlFor="sch-instructions">{dict.cleaning.instructions}</Label>
-              <Textarea id="sch-instructions" name="instructions" />
-              <p className="text-xs text-muted-foreground">{dict.cleaning.afterCheckout}</p>
+                <Textarea id="sch-instructions" name="instructions" />
+              </FormField>
               {schedules.length ? (
                 <p className="text-xs text-green-700">{dict.cleaning.scheduled}</p>
               ) : null}

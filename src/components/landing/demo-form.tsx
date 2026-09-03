@@ -4,14 +4,17 @@ import { CheckCircle2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useAudience } from "@/components/landing/audience";
 import { Button } from "@/components/ui/button";
+import {
+  FormError,
+  FormField,
+  NativeCheckbox,
+  NativeSelect,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import { submitPilotAction } from "@/lib/pilot-actions";
-
-const selectClass =
-  "h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm text-ocean focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary }) {
   const { audience, setAudience } = useAudience();
@@ -19,6 +22,7 @@ export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary })
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const f = dict.marketing.form;
+  const p = f.placeholders;
   const companyRequired = audience === "company";
 
   if (done) {
@@ -33,7 +37,7 @@ export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary })
 
   return (
     <form
-      className="grid gap-4 sm:grid-cols-2"
+      className="grid gap-x-6 gap-y-5 sm:grid-cols-2"
       action={(data) => {
         data.set("locale", locale);
         setError(null);
@@ -55,22 +59,27 @@ export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary })
         <input id="demo-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="demo-name">{f.name}</Label>
-        <Input id="demo-name" name="name" required maxLength={120} autoComplete="name" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="demo-company">{companyRequired ? f.company : f.companyOptional}</Label>
+      <FormField label={f.name} htmlFor="demo-name" required>
+        <Input
+          id="demo-name"
+          name="name"
+          required
+          maxLength={120}
+          autoComplete="name"
+          placeholder={p.name}
+        />
+      </FormField>
+      <FormField label={companyRequired ? f.company : f.companyOptional} htmlFor="demo-company" required={companyRequired}>
         <Input
           id="demo-company"
           name="company"
           required={companyRequired}
           maxLength={160}
           autoComplete="organization"
+          placeholder={p.company}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="demo-email">{f.email}</Label>
+      </FormField>
+      <FormField label={f.email} htmlFor="demo-email" required>
         <Input
           id="demo-email"
           name="email"
@@ -78,63 +87,62 @@ export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary })
           required
           maxLength={200}
           autoComplete="email"
+          placeholder={p.email}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="demo-phone">{f.phone}</Label>
-        <Input id="demo-phone" name="phone" type="tel" required maxLength={40} autoComplete="tel" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="demo-count">{f.propertyCount}</Label>
-        <select
+      </FormField>
+      <FormField label={f.phone} htmlFor="demo-phone" required>
+        <Input
+          id="demo-phone"
+          name="phone"
+          type="tel"
+          required
+          maxLength={40}
+          autoComplete="tel"
+          placeholder={p.phone}
+        />
+      </FormField>
+      <FormField label={f.propertyCount} htmlFor="demo-count" required>
+        <NativeSelect
           key={audience}
           id="demo-count"
           name="propertyCount"
-          className={selectClass}
           defaultValue={audience === "private" ? "1-5" : "6-20"}
+          aria-label={p.propertyCount}
         >
           <option value="1-5">1–5</option>
           <option value="6-20">6–20</option>
           <option value="21-50">21–50</option>
           <option value="51-200">51–200</option>
           <option value="200+">200+</option>
-        </select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="demo-type">{f.accountType}</Label>
-        <select
+        </NativeSelect>
+      </FormField>
+      <FormField label={f.accountType} htmlFor="demo-type" required>
+        <SegmentedControl
           id="demo-type"
           name="accountType"
-          className={selectClass}
           value={audience}
-          onChange={(event) => {
-            const next = event.target.value === "company" ? "company" : "private";
-            setAudience(next);
-          }}
-        >
-          <option value="private">{f.private}</option>
-          <option value="company">{f.companyType}</option>
-        </select>
-      </div>
-      <div className="space-y-1.5 sm:col-span-2">
-        <Label htmlFor="demo-message">{f.message}</Label>
-        <Textarea id="demo-message" name="message" rows={4} maxLength={2000} required />
-      </div>
-      <label htmlFor="demo-consent" className="flex items-start gap-2.5 text-sm text-navy-700 sm:col-span-2">
-        <input
-          id="demo-consent"
-          type="checkbox"
-          name="consent"
-          required
-          className="mt-1 h-4 w-4 rounded border-input"
+          onChange={(next) => setAudience(next === "company" ? "company" : "private")}
+          options={[
+            { value: "private", label: f.private },
+            { value: "company", label: f.companyType },
+          ]}
         />
+      </FormField>
+      <FormField label={f.message} htmlFor="demo-message" required className="sm:col-span-2">
+        <Textarea
+          id="demo-message"
+          name="message"
+          rows={4}
+          maxLength={2000}
+          required
+          placeholder={p.message}
+        />
+      </FormField>
+      <label htmlFor="demo-consent" className="flex items-start gap-3 text-[15px] leading-relaxed text-ocean sm:col-span-2">
+        <NativeCheckbox id="demo-consent" name="consent" required />
         {f.consent}
       </label>
-      {error ? (
-        <p role="alert" className="text-sm text-destructive sm:col-span-2">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormError className="sm:col-span-2">{error}</FormError> : null}
       <div className="sm:col-span-2">
         <Button type="submit" size="lg" variant="cta" disabled={pending}>
           {pending ? f.sending : f.submit}

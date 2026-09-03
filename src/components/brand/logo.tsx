@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 export type LogoTone = "brand" | "onDark" | "black" | "white";
 
 const fills: Record<LogoTone, { word: string; mark: string; pin: string }> = {
-  brand: { word: "#16383F", mark: "#16383F", pin: "#B64A32" },
-  onDark: { word: "#F7F4ED", mark: "#F7F4ED", pin: "#B64A32" },
+  brand: { word: "#16383F", mark: "#16383F", pin: "var(--color-terracotta)" },
+  onDark: { word: "#F7F4ED", mark: "#F7F4ED", pin: "var(--color-terracotta)" },
   black: { word: "#1D292B", mark: "#1D292B", pin: "#1D292B" },
   white: { word: "#FFFFFF", mark: "#FFFFFF", pin: "#FFFFFF" },
 };
@@ -126,7 +126,7 @@ export function Logo({
               d="M16 6.2c4.15 0 7.5 2.95 7.5 6.6 0 4.95-7.5 12.2-7.5 12.2S8.5 17.75 8.5 12.8c0-3.65 3.35-6.6 7.5-6.6Z"
             />
             <circle cx="16" cy="13" r="2.85" fill="#16383F" />
-            <circle cx="16" cy="13" r="1.15" fill="#B64A32" />
+            <circle cx="16" cy="13" r="1.15" fill="var(--color-terracotta)" />
           </svg>
         </span>
       ) : (

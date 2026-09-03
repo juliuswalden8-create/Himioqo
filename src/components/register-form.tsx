@@ -7,8 +7,8 @@ import { CountryField, PhoneField } from "@/components/phone-field";
 import { LanguagePicker } from "@/components/language-picker";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Button } from "@/components/ui/button";
+import { FormError, FormField, NativeCheckbox, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { Dictionary } from "@/i18n/messages";
 import { registerTrialAction } from "@/lib/signup-actions";
 import type { AccountType } from "@/lib/types";
@@ -93,17 +93,18 @@ export function RegisterForm({
         </div>
       </fieldset>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={dict.register.firstName} htmlFor="firstName">
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+        <FormField label={dict.register.firstName} htmlFor="firstName" required>
           <Input id="firstName" name="firstName" autoComplete="given-name" required />
-        </Field>
-        <Field label={dict.register.lastName} htmlFor="lastName">
+        </FormField>
+        <FormField label={dict.register.lastName} htmlFor="lastName" required>
           <Input id="lastName" name="lastName" autoComplete="family-name" required />
-        </Field>
+        </FormField>
       </div>
-      <Field
+      <FormField
         label={isPrivate ? dict.register.companyOptional : dict.register.company}
         htmlFor="company"
+        required={!isPrivate}
       >
         <Input
           id="company"
@@ -112,24 +113,23 @@ export function RegisterForm({
           required={!isPrivate}
           placeholder={isPrivate ? dict.register.companyPrivateHelp : undefined}
         />
-      </Field>
-      <Field label={dict.register.email} htmlFor="email">
+      </FormField>
+      <FormField label={dict.register.email} htmlFor="email" required>
         <Input id="email" name="email" type="email" autoComplete="email" required />
-      </Field>
-      <Field label={dict.register.phone} htmlFor="phone">
+      </FormField>
+      <FormField label={dict.register.phone} htmlFor="phone" required>
         <PhoneField dict={dict} />
-      </Field>
-      <Field label={dict.register.country} htmlFor="country">
+      </FormField>
+      <FormField label={dict.register.country} htmlFor="country">
         <CountryField countries={countries} />
-      </Field>
-      <Field label={dict.register.language} htmlFor="locale">
+      </FormField>
+      <FormField label={dict.register.language} htmlFor="locale">
         <LanguagePicker dict={dict} value={lang} onChange={setLang} />
-      </Field>
-      <Field label={dict.register.units} htmlFor="unitBand">
-        <select
+      </FormField>
+      <FormField label={dict.register.units} htmlFor="unitBand">
+        <NativeSelect
           id="unitBand"
           name="unitBand"
-          className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm"
           defaultValue={isPrivate ? "1-5" : "6-20"}
         >
           {Object.entries(dict.units).map(([value, label]) => (
@@ -137,16 +137,11 @@ export function RegisterForm({
               {label}
             </option>
           ))}
-        </select>
-      </Field>
+        </NativeSelect>
+      </FormField>
 
-      <label className="flex items-start gap-3 text-sm leading-relaxed">
-        <input
-          type="checkbox"
-          name="terms"
-          required
-          className="mt-1 h-4 w-4 rounded border-input"
-        />
+      <label className="flex items-start gap-3 text-[15px] leading-relaxed text-ocean">
+        <NativeCheckbox name="terms" required />
         <span>
           {dict.register.terms}{" "}
           <Link href="/terms" className="underline">
@@ -158,34 +153,17 @@ export function RegisterForm({
           </Link>
         </span>
       </label>
-      <label className="flex items-start gap-3 text-sm leading-relaxed text-muted-foreground">
-        <input type="checkbox" name="marketing" className="mt-1 h-4 w-4 rounded border-input" />
+      <label className="flex items-start gap-3 text-[15px] leading-relaxed text-muted-foreground">
+        <NativeCheckbox name="marketing" />
         <span>{dict.register.marketing}</span>
       </label>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? dict.register.submitting : dict.register.submit}
       </Button>
       <p className="text-center text-sm text-muted-foreground">{dict.register.fine}</p>
     </form>
-  );
-}
-
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-    </div>
   );
 }

@@ -8,7 +8,12 @@ function isAppPath(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  const response = await updateSession(request);
+  let response: NextResponse;
+  try {
+    response = await updateSession(request);
+  } catch {
+    response = NextResponse.next({ request });
+  }
   const { pathname } = request.nextUrl;
   const session = request.cookies.get(SESSION_COOKIE)?.value;
 
@@ -27,6 +32,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  runtime: "nodejs",
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

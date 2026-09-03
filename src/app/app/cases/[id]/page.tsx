@@ -6,6 +6,7 @@ import { NotesPanel, TriagePanel, WorkLinkPanel } from "@/components/case/triage
 import { TranslatableText } from "@/components/translatable-text";
 import { PriorityBadge, StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import {
@@ -294,16 +295,14 @@ export default async function CaseDetailPage({
           </ul>
           <form action={sendOwnerMessageAction} className="mt-4 space-y-2">
             <input type="hidden" name="caseId" value={item.id} />
-            <label htmlFor="case-reply" className="sr-only">
-              {dict.dashboard.reply}
-            </label>
-            <Textarea
-              id="case-reply"
-              name="text"
-              required
-              maxLength={2000}
-              placeholder={dict.dashboard.reply}
-            />
+            <FormField label={dict.dashboard.reply} htmlFor="case-reply" required>
+              <Textarea
+                id="case-reply"
+                name="text"
+                required
+                maxLength={2000}
+              />
+            </FormField>
             <Button type="submit">{dict.dashboard.send}</Button>
           </form>
         </section>

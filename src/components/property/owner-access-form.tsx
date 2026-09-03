@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { FormError, FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { Dictionary } from "@/i18n/messages";
 import { createOwnerAccessAction } from "@/lib/owner-actions";
 
@@ -19,7 +19,7 @@ export function OwnerAccessForm({
 
   return (
     <form
-      className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2"
+      className="grid gap-x-6 gap-y-5 border-t border-border pt-4 sm:grid-cols-2"
       action={(data) => {
         data.set("propertyId", propertyId);
         setError(null);
@@ -31,19 +31,13 @@ export function OwnerAccessForm({
         });
       }}
     >
-      <div className="space-y-1.5">
-        <Label htmlFor="owner-name">{dict.owner.ownerName}</Label>
+      <FormField label={dict.owner.ownerName} htmlFor="owner-name" required>
         <Input id="owner-name" name="ownerName" required maxLength={120} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="owner-email">{dict.owner.ownerEmail}</Label>
+      </FormField>
+      <FormField label={dict.owner.ownerEmail} htmlFor="owner-email" required>
         <Input id="owner-email" name="ownerEmail" type="email" required maxLength={200} />
-      </div>
-      {error ? (
-        <p role="alert" className="text-sm text-destructive sm:col-span-2">
-          {error}
-        </p>
-      ) : null}
+      </FormField>
+      {error ? <FormError className="sm:col-span-2">{error}</FormError> : null}
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pending}>
           {dict.owner.createAccess}

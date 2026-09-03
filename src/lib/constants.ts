@@ -4,6 +4,7 @@ export const SESSION_COOKIE = "homioqo.session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 export const LOCALE_COOKIE = "homioqo.locale";
 export const PENDING_SIGNUP_COOKIE = "homioqo.pendingSignup";
+export const ACCOUNT_SNAPSHOT_COOKIE = "homioqo.account";
 export const EMAIL_FLASH_COOKIE = "homioqo.emailFlash";
 export const DEFAULT_LOCALE = "sv";
 export const FALLBACK_LOCALE = "en";

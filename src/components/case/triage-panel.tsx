@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { FormField, NativeSelect } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import {
@@ -14,9 +15,6 @@ import {
 import { priorityLabel, statusLabel } from "@/lib/labels";
 import { CASE_PRIORITIES, CASE_STATUSES } from "@/lib/types";
 import type { CasePriority, CaseStatus, Contractor } from "@/lib/types";
-
-const selectClass =
-  "h-11 w-full rounded-xl border border-border bg-white px-3 text-sm text-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function TriagePanel({
   caseId,
@@ -38,10 +36,10 @@ export function TriagePanel({
   const [pending, start] = useTransition();
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <div className="space-y-5">
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
         <form
-          className="space-y-1.5"
+          className="space-y-2"
           action={(data) => {
             data.set("caseId", caseId);
             start(async () => {
@@ -49,22 +47,20 @@ export function TriagePanel({
             });
           }}
         >
-          <label htmlFor="case-status" className="block text-sm font-medium text-navy-800">
-            {dict.caseDetail.status}
-          </label>
-          <select
-            id="case-status"
-            name="status"
-            defaultValue={status}
-            className={selectClass}
-            onChange={(event) => event.currentTarget.form?.requestSubmit()}
-          >
-            {CASE_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {statusLabel(dict, value)}
-              </option>
-            ))}
-          </select>
+          <FormField label={dict.caseDetail.status} htmlFor="case-status">
+            <NativeSelect
+              id="case-status"
+              name="status"
+              defaultValue={status}
+              onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            >
+              {CASE_STATUSES.map((value) => (
+                <option key={value} value={value}>
+                  {statusLabel(dict, value)}
+                </option>
+              ))}
+            </NativeSelect>
+          </FormField>
           <noscript>
             <Button type="submit" variant="secondary" className="mt-1">
               {dict.caseDetail.update}
@@ -73,7 +69,7 @@ export function TriagePanel({
         </form>
 
         <form
-          className="space-y-1.5"
+          className="space-y-2"
           action={(data) => {
             data.set("caseId", caseId);
             start(async () => {
@@ -81,22 +77,20 @@ export function TriagePanel({
             });
           }}
         >
-          <label htmlFor="case-priority" className="block text-sm font-medium text-navy-800">
-            {dict.caseDetail.priority}
-          </label>
-          <select
-            id="case-priority"
-            name="priority"
-            defaultValue={priority}
-            className={selectClass}
-            onChange={(event) => event.currentTarget.form?.requestSubmit()}
-          >
-            {CASE_PRIORITIES.map((value) => (
-              <option key={value} value={value}>
-                {priorityLabel(dict, value)}
-              </option>
-            ))}
-          </select>
+          <FormField label={dict.caseDetail.priority} htmlFor="case-priority">
+            <NativeSelect
+              id="case-priority"
+              name="priority"
+              defaultValue={priority}
+              onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            >
+              {CASE_PRIORITIES.map((value) => (
+                <option key={value} value={value}>
+                  {priorityLabel(dict, value)}
+                </option>
+              ))}
+            </NativeSelect>
+          </FormField>
           <noscript>
             <Button type="submit" variant="secondary" className="mt-1">
               {dict.caseDetail.update}
@@ -106,7 +100,7 @@ export function TriagePanel({
       </div>
 
       <form
-        className="space-y-2 border-t border-border pt-4"
+        className="space-y-5 border-t border-border pt-4"
         action={(data) => {
           data.set("caseId", caseId);
           start(async () => {
@@ -114,37 +108,34 @@ export function TriagePanel({
           });
         }}
       >
-        <label htmlFor="case-contractor" className="block text-sm font-medium text-navy-800">
-          {dict.caseDetail.contractor}
-        </label>
-        <select
-          id="case-contractor"
-          name="contractorId"
-          defaultValue={contractorId ?? ""}
-          className={selectClass}
-        >
-          <option value="">{dict.caseDetail.noContractor}</option>
-          {contractors.map((contractor) => (
-            <option key={contractor.id} value={contractor.id}>
-              {contractor.name} · {contractor.trade}
-            </option>
-          ))}
-        </select>
+        <FormField label={dict.caseDetail.contractor} htmlFor="case-contractor">
+          <NativeSelect
+            id="case-contractor"
+            name="contractorId"
+            defaultValue={contractorId ?? ""}
+          >
+            <option value="">{dict.caseDetail.noContractor}</option>
+            {contractors.map((contractor) => (
+              <option key={contractor.id} value={contractor.id}>
+                {contractor.name} · {contractor.trade}
+              </option>
+            ))}
+          </NativeSelect>
+        </FormField>
 
-        <label htmlFor="case-instructions" className="block text-sm font-medium text-navy-800">
-          {dict.caseDetail.instructions}
-        </label>
-        <Textarea
-          id="case-instructions"
-          name="instructions"
-          rows={3}
-          maxLength={2000}
-          defaultValue={instructions ?? ""}
-          aria-describedby="case-instructions-help"
-        />
-        <p id="case-instructions-help" className="text-xs text-muted-foreground">
-          {dict.caseDetail.instructionsHelp}
-        </p>
+        <FormField
+          label={dict.caseDetail.instructions}
+          htmlFor="case-instructions"
+          hint={dict.caseDetail.instructionsHelp}
+        >
+          <Textarea
+            id="case-instructions"
+            name="instructions"
+            rows={3}
+            maxLength={2000}
+            defaultValue={instructions ?? ""}
+          />
+        </FormField>
         <Button type="submit" disabled={pending}>
           {dict.caseDetail.assign}
         </Button>

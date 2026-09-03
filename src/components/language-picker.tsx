@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, ChevronsUpDown, Globe } from "lucide-react";
+import { Check, ChevronDown, Globe } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { fieldControlClass } from "@/components/ui/field-styles";
 import { Input } from "@/components/ui/input";
 import type { Dictionary } from "@/i18n/messages";
 import {
@@ -97,13 +98,14 @@ export function LanguagePicker({
           <button
             type="button"
             className={cn(
-              "flex h-11 w-full items-center justify-between rounded-xl border border-input bg-white px-3.5 text-left text-sm text-navy-800",
+              fieldControlClass,
+              "flex items-center justify-between text-left",
               look === "compact" &&
-                "h-9 w-9 min-w-9 justify-center px-0 sm:w-auto sm:min-w-[8.5rem] sm:justify-between sm:gap-2 sm:px-3",
+                "h-9 w-9 min-w-9 justify-center px-0 shadow-none sm:h-14 sm:w-auto sm:min-w-[8.5rem] sm:justify-between sm:gap-2 sm:px-4",
               look === "header" &&
-                "h-auto w-auto min-w-0 justify-center gap-1.5 rounded-none border-0 bg-transparent px-2 py-2 font-medium shadow-none hover:bg-navy-800/5",
+                "h-auto w-auto min-w-0 justify-center gap-1.5 rounded-none border-0 bg-transparent px-2 py-2 font-medium shadow-none hover:bg-navy-800/5 hover:shadow-none",
               look === "header-dark" &&
-                "h-auto w-auto min-w-0 justify-center gap-1.5 rounded-none border-0 bg-transparent px-2 py-2 font-medium text-ivory shadow-none hover:bg-white/10",
+                "h-auto w-auto min-w-0 justify-center gap-1.5 rounded-none border-0 bg-transparent px-2 py-2 font-medium text-ivory shadow-none hover:bg-white/10 hover:shadow-none",
             )}
             aria-label={dict.nav.language}
           >
@@ -132,9 +134,10 @@ export function LanguagePicker({
                 )}
               </span>
             </span>
-            <ChevronsUpDown
+            <ChevronDown
               className={cn(
-                "h-4 w-4 shrink-0 text-muted-foreground",
+                "h-4 w-4 shrink-0 text-ocean transition-transform duration-200",
+                open && look === "field" && "rotate-180",
                 look === "compact" && "hidden sm:block",
                 look === "header" && "hidden",
                 look === "header-dark" && "hidden",

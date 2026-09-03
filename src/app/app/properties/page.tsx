@@ -6,8 +6,8 @@ import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
 import { HealthBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { interpolate } from "@/i18n/interpolate";
 import { createPropertyAction } from "@/lib/guide-actions";
@@ -137,23 +137,19 @@ export default async function PropertiesPage({
         </section>
         <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
           <h2 className="text-sm font-semibold text-navy-800">{dict.homes.newHome}</h2>
-          <form action={createPropertyAction} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Label htmlFor="name">{dict.propertyForm.name}</Label>
+          <form action={createPropertyAction} className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+            <FormField label={dict.propertyForm.name} htmlFor="name" required className="sm:col-span-2">
               <Input id="name" name="name" required />
-            </div>
-            <div>
-              <Label htmlFor="address">{dict.propertyForm.address}</Label>
+            </FormField>
+            <FormField label={dict.propertyForm.address} htmlFor="address" required>
               <Input id="address" name="address" required />
-            </div>
-            <div>
-              <Label htmlFor="city">{dict.propertyForm.city}</Label>
+            </FormField>
+            <FormField label={dict.propertyForm.city} htmlFor="city" required>
               <Input id="city" name="city" required />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="tenantName">{dict.propertyForm.tenant}</Label>
+            </FormField>
+            <FormField label={dict.propertyForm.tenant} htmlFor="tenantName" required className="sm:col-span-2">
               <Input id="tenantName" name="tenantName" required />
-            </div>
+            </FormField>
             <div className="sm:col-span-2">
               <Button type="submit">{dict.homes.newHome}</Button>
             </div>

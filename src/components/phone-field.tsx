@@ -1,9 +1,11 @@
 "use client";
 
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { fieldControlClass, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/i18n/messages";
 import { countryName, flagEmoji } from "@/lib/i18n/languages";
 import { dialCountries, formatAsYouType } from "@/lib/phone";
@@ -41,12 +43,12 @@ export function PhoneField({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-input bg-white px-3 text-sm"
+            className={cn(fieldControlClass, "flex w-auto shrink-0 items-center gap-1.5 px-3")}
             aria-label={dict.register.countryCode}
           >
             <span aria-hidden>{current?.flag}</span>
             <span>{current?.dial}</span>
-            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <ChevronDown className={cn("h-4 w-4 text-ocean transition-transform duration-200", open && "rotate-180")} aria-hidden />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-2">
@@ -106,21 +108,22 @@ export function CountryField({
   const [value, setValue] = useState(defaultValue);
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base">
+      <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-base">
         {flagEmoji(value)}
       </span>
-      <select
+      <NativeSelect
+        id={name}
         name={name}
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="h-11 w-full appearance-none rounded-xl border border-input bg-white pl-10 pr-8 text-sm text-navy-800"
+        className="pl-11"
       >
         {countries.map((item) => (
           <option key={item.code} value={item.code}>
             {item.name}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </div>
   );
 }

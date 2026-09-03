@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/constants";
+import { hydrateAccountSnapshot } from "@/lib/account-snapshot";
 import { signValue, unsignValue } from "@/lib/crypto";
 import { getProfile } from "@/lib/data/store";
 
@@ -10,6 +11,7 @@ export interface SessionPayload {
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
+  await hydrateAccountSnapshot();
   const jar = await cookies();
   const signed = jar.get(SESSION_COOKIE)?.value;
   if (!signed) return null;

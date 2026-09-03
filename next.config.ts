@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   // `next dev` keeps serving from .next. Without this, building wipes the
   // dev server's compiled CSS.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  // Keep secrets out of the serverless bundle. Vercel gets them as env vars.
+  outputFileTracingExcludes: {
+    "*": [".env", ".env.local", ".env*.local"],
+  },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },

@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { ProgressSteps } from "@/components/progress-steps";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { qrDataUrl } from "@/lib/qr";
 import { getSession } from "@/lib/session";
@@ -64,16 +64,20 @@ export default async function OnboardingPage({
           </p>
 
           {step === 1 ? (
-            <form action={onboardingPropertyAction} className="mt-5 space-y-3">
+            <form action={onboardingPropertyAction} className="mt-5 space-y-5">
               <p className="text-sm text-muted-foreground">{dict.onboarding.s1Text}</p>
-              <Label htmlFor="name">{dict.propertyForm.name}</Label>
-              <Input id="name" name="name" required />
-              <Label htmlFor="address">{dict.propertyForm.address}</Label>
-              <Input id="address" name="address" required />
-              <Label htmlFor="city">{dict.propertyForm.city}</Label>
-              <Input id="city" name="city" required />
-              <Label htmlFor="tenantName">{dict.propertyForm.tenant}</Label>
-              <Input id="tenantName" name="tenantName" required />
+              <FormField label={dict.propertyForm.name} htmlFor="name" required>
+                <Input id="name" name="name" required />
+              </FormField>
+              <FormField label={dict.propertyForm.address} htmlFor="address" required>
+                <Input id="address" name="address" required />
+              </FormField>
+              <FormField label={dict.propertyForm.city} htmlFor="city" required>
+                <Input id="city" name="city" required />
+              </FormField>
+              <FormField label={dict.propertyForm.tenant} htmlFor="tenantName" required>
+                <Input id="tenantName" name="tenantName" required />
+              </FormField>
               <Button type="submit" className="w-full">{dict.onboarding.addProperty}</Button>
             </form>
           ) : null}
@@ -103,18 +107,23 @@ export default async function OnboardingPage({
           ) : null}
 
           {step === 3 ? (
-            <form action={onboardingContractorAction} className="mt-5 space-y-3">
+            <form action={onboardingContractorAction} className="mt-5 space-y-5">
               <p className="text-sm text-muted-foreground">{dict.onboarding.s3Text}</p>
-              <Label htmlFor="c-name">{dict.contractorForm.name}</Label>
-              <Input id="c-name" name="name" required />
-              <Label htmlFor="contactName">{dict.contractorForm.contact}</Label>
-              <Input id="contactName" name="contactName" required />
-              <Label htmlFor="trade">{dict.contractorForm.trade}</Label>
-              <Input id="trade" name="trade" />
-              <Label htmlFor="c-phone">{dict.contractorForm.phone}</Label>
-              <Input id="c-phone" name="phone" />
-              <Label htmlFor="c-email">{dict.contractorForm.email}</Label>
-              <Input id="c-email" name="email" type="email" />
+              <FormField label={dict.contractorForm.name} htmlFor="c-name" required>
+                <Input id="c-name" name="name" required />
+              </FormField>
+              <FormField label={dict.contractorForm.contact} htmlFor="contactName" required>
+                <Input id="contactName" name="contactName" required />
+              </FormField>
+              <FormField label={dict.contractorForm.trade} htmlFor="trade">
+                <Input id="trade" name="trade" />
+              </FormField>
+              <FormField label={dict.contractorForm.phone} htmlFor="c-phone">
+                <Input id="c-phone" name="phone" />
+              </FormField>
+              <FormField label={dict.contractorForm.email} htmlFor="c-email">
+                <Input id="c-email" name="email" type="email" />
+              </FormField>
               <Button type="submit" className="w-full">{dict.onboarding.addContractor}</Button>
               {contractors.length ? (
                 <Button asChild variant="secondary" className="w-full">

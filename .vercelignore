@@ -1,0 +1,5 @@
+.next
+.next-build
+.env
+.env.local
+.env*.local

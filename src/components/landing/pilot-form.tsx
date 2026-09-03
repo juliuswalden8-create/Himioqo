@@ -3,14 +3,16 @@
 import { CheckCircle2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  FormError,
+  FormField,
+  NativeCheckbox,
+  NativeSelect,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import { submitPilotAction } from "@/lib/pilot-actions";
-
-const selectClass =
-  "h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm text-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function PilotForm({ locale, dict }: { locale: string; dict: Dictionary }) {
   const [done, setDone] = useState(false);
@@ -32,7 +34,7 @@ export function PilotForm({ locale, dict }: { locale: string; dict: Dictionary }
 
   return (
     <form
-      className="grid gap-4 sm:grid-cols-2"
+      className="grid gap-x-6 gap-y-5 sm:grid-cols-2"
       action={(data) => {
         data.set("locale", locale);
         setError(null);
@@ -50,18 +52,15 @@ export function PilotForm({ locale, dict }: { locale: string; dict: Dictionary }
         });
       }}
     >
-      {/* Honeypot for bots. Hidden from users and assistive technology. */}
       <div className="hidden" aria-hidden>
         <label htmlFor="pilot-website">Website</label>
         <input id="pilot-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="pilot-name">{dict.pilot.name}</Label>
+      <FormField label={dict.pilot.name} htmlFor="pilot-name" required>
         <Input id="pilot-name" name="name" required maxLength={120} autoComplete="name" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="pilot-company">{dict.pilot.company}</Label>
+      </FormField>
+      <FormField label={dict.pilot.company} htmlFor="pilot-company" required>
         <Input
           id="pilot-company"
           name="company"
@@ -69,9 +68,8 @@ export function PilotForm({ locale, dict }: { locale: string; dict: Dictionary }
           maxLength={160}
           autoComplete="organization"
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="pilot-email">{dict.pilot.email}</Label>
+      </FormField>
+      <FormField label={dict.pilot.email} htmlFor="pilot-email" required>
         <Input
           id="pilot-email"
           name="email"
@@ -80,43 +78,38 @@ export function PilotForm({ locale, dict }: { locale: string; dict: Dictionary }
           maxLength={200}
           autoComplete="email"
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="pilot-phone">{dict.pilot.phone}</Label>
+      </FormField>
+      <FormField label={dict.pilot.phone} htmlFor="pilot-phone">
         <Input id="pilot-phone" name="phone" type="tel" maxLength={40} autoComplete="tel" />
-      </div>
+      </FormField>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="pilot-region">{dict.pilot.region}</Label>
+      <FormField label={dict.pilot.region} htmlFor="pilot-region">
         <Input
           id="pilot-region"
           name="region"
           maxLength={120}
           placeholder={dict.pilot.regionHelp}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="pilot-count">{dict.pilot.propertyCount}</Label>
-        <select id="pilot-count" name="propertyCount" className={selectClass} defaultValue="6-20">
+      </FormField>
+      <FormField label={dict.pilot.propertyCount} htmlFor="pilot-count">
+        <NativeSelect id="pilot-count" name="propertyCount" defaultValue="6-20">
           <option value="1-5">1–5</option>
           <option value="6-20">6–20</option>
           <option value="21-50">21–50</option>
           <option value="51-200">51–200</option>
           <option value="200+">200+</option>
-        </select>
-      </div>
+        </NativeSelect>
+      </FormField>
 
-      <div className="space-y-1.5 sm:col-span-2">
-        <Label htmlFor="pilot-type">{dict.pilot.rentalType}</Label>
-        <select id="pilot-type" name="rentalType" className={selectClass} defaultValue="shortTerm">
+      <FormField label={dict.pilot.rentalType} htmlFor="pilot-type" className="sm:col-span-2">
+        <NativeSelect id="pilot-type" name="rentalType" defaultValue="shortTerm">
           <option value="shortTerm">{dict.pilot.rentalTypes.shortTerm}</option>
           <option value="longTerm">{dict.pilot.rentalTypes.longTerm}</option>
           <option value="mixed">{dict.pilot.rentalTypes.mixed}</option>
-        </select>
-      </div>
+        </NativeSelect>
+      </FormField>
 
-      <div className="space-y-1.5 sm:col-span-2">
-        <Label htmlFor="pilot-method">{dict.pilot.currentMethod}</Label>
+      <FormField label={dict.pilot.currentMethod} htmlFor="pilot-method" className="sm:col-span-2">
         <Textarea
           id="pilot-method"
           name="currentMethod"
@@ -124,26 +117,21 @@ export function PilotForm({ locale, dict }: { locale: string; dict: Dictionary }
           maxLength={500}
           placeholder={dict.pilot.currentMethodHelp}
         />
-      </div>
-      <div className="space-y-1.5 sm:col-span-2">
-        <Label htmlFor="pilot-valuable">{dict.pilot.mostValuable}</Label>
+      </FormField>
+      <FormField label={dict.pilot.mostValuable} htmlFor="pilot-valuable" className="sm:col-span-2">
         <Textarea id="pilot-valuable" name="mostValuable" rows={2} maxLength={500} />
-      </div>
+      </FormField>
 
-      <label className="flex items-start gap-2.5 text-sm text-navy-700 sm:col-span-2">
-        <input type="checkbox" name="wantsPilot" defaultChecked className="mt-1" />
+      <label className="flex items-start gap-3 text-[15px] leading-relaxed text-ocean sm:col-span-2">
+        <NativeCheckbox name="wantsPilot" defaultChecked />
         {dict.pilot.wantsPilot}
       </label>
-      <label className="flex items-start gap-2.5 text-sm text-navy-700 sm:col-span-2">
-        <input type="checkbox" name="consent" required className="mt-1" />
+      <label className="flex items-start gap-3 text-[15px] leading-relaxed text-ocean sm:col-span-2">
+        <NativeCheckbox name="consent" required />
         {dict.pilot.consent}
       </label>
 
-      {error ? (
-        <p role="alert" className="text-sm text-destructive sm:col-span-2">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormError className="sm:col-span-2">{error}</FormError> : null}
 
       <div className="sm:col-span-2">
         <Button type="submit" size="lg" disabled={pending}>

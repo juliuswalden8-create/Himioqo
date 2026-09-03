@@ -62,9 +62,17 @@
   --color-text-muted: #667573;
   --color-destructive: #dc3b3b;
   --color-destructive-foreground: #ffffff;
-  --color-border: #e4e7e2;
-  --color-input: #d5dad6;
-  --color-ring: #16383f;
+  --color-border: #dde3df;
+  --color-input: #dde3df;
+  --color-ring: var(--color-terracotta);
+  --color-field-border: #dde3df;
+  --color-field-hover: #c5cec9;
+  --color-placeholder: #8a9693;
+
+  --shadow-field: 0 1px 2px rgba(22, 56, 63, 0.05);
+  --shadow-field-focus: 0 0 0 4px
+    color-mix(in srgb, var(--color-terracotta) 12%, transparent);
+  --shadow-field-error: 0 0 0 4px rgba(220, 59, 59, 0.12);
 
   --color-status-new: #2f6fed;
   --color-status-waiting: #e07a2f;
@@ -146,6 +154,10 @@
     border-radius: 8px;
   }
 
+  :is(input, select, textarea, [data-slot="select-trigger"]):focus-visible {
+    outline: none;
+  }
+
   ::selection {
     background-color: var(--color-sage);
     color: var(--color-ocean);
@@ -179,6 +191,14 @@
     color: var(--color-graphite);
   }
 
+  /* Company view: terracotta accents match the hero phone binder (ocean). */
+  .marketing-page[data-audience="company"] {
+    --color-terracotta: var(--color-ocean);
+    --color-terracotta-hover: var(--color-ocean-hover);
+    --color-terracotta-soft: var(--color-sage);
+    --color-ring: var(--color-ocean);
+  }
+
   .marketing-page h1,
   .marketing-page h2,
   .marketing-page h3 {
@@ -210,6 +230,74 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+.hq-checkbox,
+.hq-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid var(--color-field-border);
+  background-color: #fff;
+  box-shadow: var(--shadow-field);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.hq-checkbox {
+  border-radius: 0.375rem;
+}
+
+.hq-radio {
+  border-radius: 999px;
+}
+
+.hq-checkbox:hover,
+.hq-radio:hover {
+  border-color: var(--color-field-hover);
+}
+
+.hq-checkbox:focus-visible,
+.hq-radio:focus-visible {
+  outline: none;
+  border-color: var(--color-terracotta);
+  box-shadow: var(--shadow-field-focus);
+}
+
+.hq-checkbox:checked {
+  background-color: var(--color-ocean);
+  border-color: var(--color-ocean);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5 6.5 11.5 12.5 4.5'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 0.75rem;
+}
+
+.hq-radio:checked {
+  background-color: #fff;
+  border-color: var(--color-ocean);
+  background-image: radial-gradient(circle, var(--color-ocean) 0 5px, transparent 6px);
+}
+
+.hq-checkbox:disabled,
+.hq-radio:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.hq-select {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hq-select::-ms-expand {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

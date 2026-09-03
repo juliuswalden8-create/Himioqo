@@ -4,9 +4,7 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { SiteHeader } from "@/components/site-header";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { maskEmail } from "@/lib/crypto";
-import { getProfile } from "@/lib/data/store";
-import { getPendingSignupId } from "@/lib/pending";
-import { peekDevVerifyToken } from "@/lib/data/store";
+import { getPendingSignup } from "@/lib/pending";
 import { requestUrl } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
@@ -20,15 +18,16 @@ export default async function CheckEmailPage({
   const dict = await getDictionary(locale);
   const { sent } = await searchParams;
   const showFull = sent === "1";
-  const profileId = await getPendingSignupId();
-  const profile = profileId ? getProfile(profileId) : null;
+  const pending = await getPendingSignup();
+  const profile = pending?.profile ?? null;
   const body =
     showFull && profile
       ? interpolate(dict.check.body, { email: profile.email })
       : dict.check.masked;
-  const verifyToken =
-    profile && !process.env.RESEND_API_KEY ? peekDevVerifyToken(profile.id) : null;
-  const verifyUrl = verifyToken ? await requestUrl(`/verify/${verifyToken}`) : null;
+  const verifyUrl =
+    pending?.token && !process.env.RESEND_API_KEY
+      ? await requestUrl(`/verify/${pending.token}`)
+      : null;
 
   return (
     <div className="min-h-dvh bg-canvas">

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/constants";
+import { hydrateAccountSnapshot } from "@/lib/account-snapshot";
 import {
   addAfterPhotos,
   addCaseNote,
@@ -46,10 +47,21 @@ function revalidateAll() {
   revalidatePath("/", "layout");
 }
 
-export async function loginAction(formData: FormData) {
+function safeNextPath(value: string) {
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return "/app";
+  }
+  return value;
+}
+
+export async function loginAction(
+  _prev: { error?: string } | null,
+  formData: FormData,
+) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/app");
+  const next = safeNextPath(String(formData.get("next") ?? "/app"));
+  await hydrateAccountSnapshot();
   const profile = authenticate(email, password);
   if (!profile) {
     return { error: "login" };
@@ -57,20 +69,28 @@ export async function loginAction(formData: FormData) {
   if (!profile.emailVerifiedAt) {
     return { error: "unverified" };
   }
-  await setSession({
-    profileId: profile.id,
-    organizationId: profile.organizationId,
-  });
-  redirect(next.startsWith("/") ? next : "/app");
+  try {
+    await setSession({
+      profileId: profile.id,
+      organizationId: profile.organizationId,
+    });
+  } catch {
+    return { error: "generic" };
+  }
+  redirect(next);
 }
 
 export async function demoLoginAction() {
   const profile = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
   if (!profile) redirect("/login");
-  await setSession({
-    profileId: profile.id,
-    organizationId: profile.organizationId,
-  });
+  try {
+    await setSession({
+      profileId: profile.id,
+      organizationId: profile.organizationId,
+    });
+  } catch {
+    redirect("/login");
+  }
   redirect("/app");
 }
 

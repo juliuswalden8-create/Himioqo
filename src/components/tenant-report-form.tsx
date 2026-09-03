@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { FormError, FormField, NativeRadio } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import { submitReportAction } from "@/lib/actions";
@@ -78,34 +78,32 @@ export function TenantReportForm({
           </button>
         ))}
       </div>
-      <Label htmlFor="title">{dict.report.heading}</Label>
-      <Input id="title" name="title" required />
-      <Label htmlFor="description">{dict.report.description}</Label>
-      <Textarea id="description" name="description" required />
-      <div>
-        <Label htmlFor="files">{dict.report.photos}</Label>
-        <p className="mb-2 text-xs text-muted-foreground">{dict.report.photosHelp}</p>
-        <input
+      <FormField label={dict.report.heading} htmlFor="title" required>
+        <Input id="title" name="title" required />
+      </FormField>
+      <FormField label={dict.report.description} htmlFor="description" required>
+        <Textarea id="description" name="description" required />
+      </FormField>
+      <FormField label={dict.report.photos} htmlFor="files" hint={dict.report.photosHelp}>
+        <Input
           id="files"
           name="files"
           type="file"
           accept="image/*,video/*"
           multiple
-          className="block w-full text-sm text-muted-foreground"
         />
-      </div>
+      </FormField>
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-navy-800">{dict.report.urgency}</legend>
+        <legend className="mb-2 text-[15px] font-medium text-ocean">{dict.report.urgency}</legend>
         <div className="grid gap-2">
           {GUEST_PRIORITIES.map((item) => (
             <label
               key={item}
-              className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 text-sm ${
-                priority === item ? "border-navy-800 bg-navy-50" : "border-border bg-white"
+              className={`flex min-h-14 items-center gap-3 rounded-[12px] border px-4 text-[15px] ${
+                priority === item ? "border-ocean bg-navy-50" : "border-field-border bg-white"
               }`}
             >
-              <input
-                type="radio"
+              <NativeRadio
                 name="priorityChoice"
                 checked={priority === item}
                 onChange={() => setPriority(item)}
@@ -117,13 +115,16 @@ export function TenantReportForm({
       </fieldset>
       <input type="hidden" name="discoveredAt" value={new Date().toISOString()} />
       <input type="hidden" name="stillOngoing" value="true" />
-      <Label htmlFor="reporterName">{dict.report.name}</Label>
-      <Input id="reporterName" name="reporterName" required />
-      <Label htmlFor="reporterPhone">{dict.report.phone}</Label>
-      <Input id="reporterPhone" name="reporterPhone" required />
-      <Label htmlFor="reporterEmail">{dict.report.email}</Label>
-      <Input id="reporterEmail" name="reporterEmail" type="email" required />
-      {state?.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      <FormField label={dict.report.name} htmlFor="reporterName" required>
+        <Input id="reporterName" name="reporterName" required />
+      </FormField>
+      <FormField label={dict.report.phone} htmlFor="reporterPhone" required>
+        <Input id="reporterPhone" name="reporterPhone" required />
+      </FormField>
+      <FormField label={dict.report.email} htmlFor="reporterEmail" required>
+        <Input id="reporterEmail" name="reporterEmail" type="email" required />
+      </FormField>
+      {state?.error ? <FormError>{state.error}</FormError> : null}
       <Button type="submit" className="h-12 w-full" disabled={pending}>
         {pending ? dict.report.sending : dict.report.submit}
       </Button>

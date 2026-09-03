@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
@@ -41,6 +43,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className="min-h-dvh font-sans antialiased">
         {children}
         <Toaster />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

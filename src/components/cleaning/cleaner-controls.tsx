@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { FormError, NativeCheckbox, NativeSelect } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import { cleanerStatusAction, reportCleaningIssueAction } from "@/lib/cleaning-actions";
@@ -79,31 +80,23 @@ export function CleaningIssueForm({
       <label htmlFor="issue-kind" className="sr-only">
         {dict.cleaning.issue}
       </label>
-      <select
-        id="issue-kind"
-        name="kind"
-        className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+      <NativeSelect id="issue-kind" name="kind">
         <option value="damage">{dict.cleaning.damage}</option>
         <option value="missing">{dict.cleaning.missing}</option>
         <option value="repair">{dict.cleaning.repair}</option>
-      </select>
+      </NativeSelect>
 
       <label htmlFor="issue-text" className="sr-only">
         {dict.cleaning.issueHelp}
       </label>
       <Textarea id="issue-text" name="text" required maxLength={2000} rows={3} />
 
-      <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" name="convert" defaultChecked className="mt-1" />
+      <label className="flex items-start gap-3 text-[15px] leading-relaxed text-ocean">
+        <NativeCheckbox name="convert" defaultChecked />
         {dict.cleaning.convert}
       </label>
 
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       <Button type="submit" variant="secondary" className="h-11 w-full" disabled={pending}>
         {dict.cleaning.reportIssue}

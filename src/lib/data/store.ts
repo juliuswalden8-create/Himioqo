@@ -24,6 +24,11 @@ import {
 import { DEFAULT_CATEGORY_ORDER } from "@/lib/places";
 import { INCLUDED_QR_CODES, TRIAL_DAYS } from "@/lib/constants";
 import { hashPassword, hashToken, verifyPassword } from "@/lib/crypto";
+import {
+  decodeSignupTicket,
+  isSignupTicketExpired,
+  type SignupTicket,
+} from "@/lib/signup-ticket";
 import type {
   AccountType,
   ActivityLog,
@@ -346,7 +351,86 @@ export function peekDevVerifyToken(profileId: string) {
   return getStore().verifyLinks[profileId];
 }
 
+export function upsertTrialAccountFromTicket(ticket: SignupTicket) {
+  const email = ticket.em.trim().toLowerCase();
+  const existing = getProfile(ticket.pid) ?? getProfileByEmail(email);
+  if (existing) return existing;
+
+  const store = getStore();
+  const now = nowIso();
+  if (!getOrganization(ticket.oid)) {
+    store.organizations.push({
+      id: ticket.oid,
+      createdAt: now,
+      updatedAt: now,
+      accountType: ticket.at,
+      name: ticket.on,
+      supportEmail: email,
+      supportPhone: ticket.ph,
+      emergencyPhone: "112",
+      plan: "trial",
+      trialEndsAt: daysFromNow(TRIAL_DAYS),
+      billed: false,
+      qrAllowance: INCLUDED_QR_CODES,
+    });
+  }
+  const profile: Profile = {
+    id: ticket.pid,
+    createdAt: now,
+    updatedAt: now,
+    organizationId: ticket.oid,
+    firstName: ticket.fn,
+    lastName: ticket.ln,
+    fullName: `${ticket.fn} ${ticket.ln}`.trim(),
+    email,
+    phone: ticket.ph,
+    phoneCountry: ticket.pc,
+    country: ticket.co,
+    locale: ticket.lo,
+    unitBand: ticket.ub,
+    marketingConsent: ticket.mk,
+  };
+  store.profiles.push(profile);
+  return profile;
+}
+
+export function upsertAccountSnapshot(input: { profile: Profile; organization: Organization }) {
+  const store = getStore();
+  const now = nowIso();
+  const existingOrg = getOrganization(input.organization.id);
+  if (existingOrg) {
+    Object.assign(existingOrg, input.organization, { updatedAt: now });
+  } else {
+    store.organizations.push({ ...input.organization, updatedAt: now });
+  }
+  const existingProfile = getProfile(input.profile.id);
+  if (existingProfile) {
+    Object.assign(existingProfile, input.profile, { updatedAt: now });
+    return existingProfile;
+  }
+  const byEmail = getProfileByEmail(input.profile.email);
+  if (byEmail && byEmail.id !== input.profile.id) return byEmail;
+  store.profiles.push({ ...input.profile, updatedAt: now });
+  return getProfile(input.profile.id)!;
+}
+
 export function consumeVerificationToken(rawToken: string) {
+  const ticket = decodeSignupTicket(rawToken);
+  if (ticket) {
+    if (isSignupTicketExpired(ticket)) return null;
+    const profile = upsertTrialAccountFromTicket(ticket);
+    const verifiedAt = profile.emailVerifiedAt ?? nowIso();
+    profile.emailVerifiedAt = verifiedAt;
+    profile.updatedAt = verifiedAt;
+    const hashed = hashToken(rawToken);
+    const stored = getStore().verificationTokens.find((item) => item.tokenHash === hashed);
+    if (stored && !stored.usedAt) {
+      stored.usedAt = verifiedAt;
+      stored.updatedAt = verifiedAt;
+    }
+    return profile;
+  }
+
   const store = getStore();
   const hashed = hashToken(rawToken);
   const now = Date.now();

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { CleaningStatusBadge, CopyLinkButton, ReadyBadge } from "@/components/cleaning-status";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { approveCleaningAction, returnCleaningAction } from "@/lib/cleaning-actions";
@@ -150,9 +151,11 @@ export default async function CleaningDetailPage({
               <input type="hidden" name="jobId" value={job.id} />
               <Button type="submit">{dict.cleaning.approve}</Button>
             </form>
-            <form action={returnCleaningAction} className="space-y-2">
+            <form action={returnCleaningAction} className="space-y-5">
               <input type="hidden" name="jobId" value={job.id} />
-              <Textarea name="comment" required placeholder={dict.cleaning.returnComment} />
+              <FormField label={dict.cleaning.returnComment} htmlFor="return-comment" required>
+                <Textarea id="return-comment" name="comment" required />
+              </FormField>
               <Button type="submit" variant="secondary">
                 {dict.cleaning.return}
               </Button>

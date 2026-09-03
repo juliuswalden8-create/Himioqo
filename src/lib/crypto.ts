@@ -1,13 +1,22 @@
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 /**
- * Signing key for session cookies. In production this must come from the
- * environment; without it a forged cookie would be accepted. In development we
- * fall back to a per-process key, which simply invalidates sessions on restart.
+ * Signing key for session cookies. Prefer SESSION_SECRET in every environment.
+ * Production still needs a stable key if the env var is missing (Vercel login
+ * would otherwise crash). Derive one from the project id so cookies cannot be
+ * forged with an empty secret, then fall back to a per-process key in dev.
  */
 function sessionSecret() {
   const fromEnv = process.env.SESSION_SECRET;
   if (fromEnv && fromEnv.length >= 16) return fromEnv;
+
+  const vercelProject = process.env.VERCEL_PROJECT_ID?.trim();
+  if (vercelProject) {
+    return createHash("sha256")
+      .update(`homioqo.session.v1:${vercelProject}`)
+      .digest("hex");
+  }
+
   if (process.env.NODE_ENV === "production") {
     throw new Error("SESSION_SECRET must be set to a value of at least 16 characters.");
   }
@@ -23,15 +32,19 @@ export function signValue(value: string) {
 
 /** Returns the payload only when the signature verifies. */
 export function unsignValue(signed: string): string | null {
-  const index = signed.lastIndexOf(".");
-  if (index <= 0) return null;
-  const value = signed.slice(0, index);
-  const provided = Buffer.from(signed.slice(index + 1));
-  const expected = Buffer.from(
-    createHmac("sha256", sessionSecret()).update(value).digest("base64url"),
-  );
-  if (provided.length !== expected.length) return null;
-  return timingSafeEqual(provided, expected) ? value : null;
+  try {
+    const index = signed.lastIndexOf(".");
+    if (index <= 0) return null;
+    const value = signed.slice(0, index);
+    const provided = Buffer.from(signed.slice(index + 1));
+    const expected = Buffer.from(
+      createHmac("sha256", sessionSecret()).update(value).digest("base64url"),
+    );
+    if (provided.length !== expected.length) return null;
+    return timingSafeEqual(provided, expected) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 export function randomToken(bytes = 32) {

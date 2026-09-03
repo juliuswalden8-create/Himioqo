@@ -87,6 +87,14 @@ export const marketingSv = {
       },
     ],
   },
+  qrSetup: {
+    title: "Så ser det ut när QR-koden är på plats",
+    text: "En liten skylt vid dörren. Gästen skannar och öppnar gästguiden direkt i telefonen – utan app och utan inloggning.",
+    caption: "Skanna för gästguiden",
+    imageAlt: "En hall i ett semesterboende, redo för en Homioqo-skylt med QR-kod",
+    qrAlt: "QR-kod till Homioqos gästguide",
+    phoneAlt: "Mobil som visar Homioqos startsida efter att QR-koden skannats",
+  },
   guide: {
     title: "Allt gästen behöver – direkt i mobilen",
     features: [
@@ -440,6 +448,15 @@ export const marketingSv = {
     required: "Fyll i namn och e-post.",
     invalidEmail: "Ange en giltig e-postadress.",
     consentRequired: "Vi behöver ditt samtycke för att kunna höra av oss.",
+    placeholders: {
+      name: "Ditt namn",
+      company: "Företagets namn",
+      email: "namn@foretag.se",
+      phone: "07X-XXX XX XX",
+      propertyCount: "Välj antal bostäder",
+      accountType: "Välj kundtyp",
+      message: "Berätta kort hur vi kan hjälpa dig",
+    },
   },
 };
 
@@ -529,6 +546,14 @@ export const marketingEn: MarketingCopy = {
         text: "See status, message, and mark the issue as resolved.",
       },
     ],
+  },
+  qrSetup: {
+    title: "This is how it looks once the QR code is in place",
+    text: "A small sign by the door. The guest scans and the guest guide opens on their phone – no app and no login.",
+    caption: "Scan for the guest guide",
+    imageAlt: "A hallway in a holiday home, ready for a Homioqo QR sign",
+    qrAlt: "QR code for the Homioqo guest guide",
+    phoneAlt: "Phone showing the Homioqo home screen after scanning the QR code",
   },
   guide: {
     title: "Everything the guest needs – on their phone",
@@ -874,6 +899,15 @@ export const marketingEn: MarketingCopy = {
     required: "Please fill in your name and email.",
     invalidEmail: "Please enter a valid email address.",
     consentRequired: "We need your consent before we can get in touch.",
+    placeholders: {
+      name: "Your name",
+      company: "Company name",
+      email: "name@company.com",
+      phone: "+46 7X XXX XX XX",
+      propertyCount: "Choose number of homes",
+      accountType: "Choose customer type",
+      message: "Tell us briefly how we can help",
+    },
   },
 };
 
@@ -961,6 +995,14 @@ export const marketingEs: MarketingCopy = {
         text: "Consulta el estado, comunícate y marca el problema como resuelto.",
       },
     ],
+  },
+  qrSetup: {
+    title: "Así se ve cuando el código QR está colocado",
+    text: "Un pequeño cartel junto a la puerta. El huésped escanea y abre la guía en el teléfono – sin app y sin iniciar sesión.",
+    caption: "Escanea para la guía",
+    imageAlt: "Un recibidor en una vivienda de vacaciones, listo para un cartel QR de Homioqo",
+    qrAlt: "Código QR de la guía de huéspedes de Homioqo",
+    phoneAlt: "Móvil que muestra la página de inicio de Homioqo tras escanear el código QR",
   },
   guide: {
     title: "Todo lo que el huésped necesita – en el móvil",
@@ -1306,5 +1348,14 @@ export const marketingEs: MarketingCopy = {
     required: "Indica tu nombre y correo electrónico.",
     invalidEmail: "Introduce un correo electrónico válido.",
     consentRequired: "Necesitamos tu consentimiento para poder contactarte.",
+    placeholders: {
+      name: "Tu nombre",
+      company: "Nombre de la empresa",
+      email: "nombre@empresa.com",
+      phone: "+34 6XX XXX XXX",
+      propertyCount: "Elige el número de viviendas",
+      accountType: "Elige el tipo de cliente",
+      message: "Cuéntanos brevemente cómo podemos ayudarte",
+    },
   },
 };

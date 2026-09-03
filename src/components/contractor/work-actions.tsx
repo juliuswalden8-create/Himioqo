@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import { MAX_PHOTOS } from "@/lib/constants";
@@ -43,10 +45,9 @@ export function RespondButtons({ token, dict }: { token: string; dict: Dictionar
           });
         }}
       >
-        <label className="block text-sm font-medium text-navy-800" htmlFor="decline-reason">
-          {dict.contractor.declineReason}
-        </label>
-        <Textarea id="decline-reason" name="reason" rows={3} maxLength={500} />
+        <FormField label={dict.contractor.declineReason} htmlFor="decline-reason">
+          <Textarea id="decline-reason" name="reason" rows={3} maxLength={500} />
+        </FormField>
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant="secondary" disabled={pending}>
             {dict.contractor.declineSubmit}
@@ -177,16 +178,15 @@ export function WorkPhotoUpload({
         }
       }}
     >
-      <label htmlFor={inputId} className="block text-sm font-medium text-navy-800">
+      <label htmlFor={inputId} className="block text-[15px] font-medium text-ocean">
         {label}
       </label>
-      <input
+      <Input
         id={inputId}
         name="files"
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         multiple
-        className="block w-full text-sm text-muted-foreground"
       />
       <p className="text-xs text-muted-foreground">{dict.contractor.uploadHelp}</p>
       {error ? (
@@ -222,17 +222,15 @@ export function WorkMessageForm({
         });
       }}
     >
-      <label htmlFor="work-message" className="sr-only">
-        {dict.contractor.messagePlaceholder}
-      </label>
-      <Textarea
-        id="work-message"
-        name="text"
-        required
-        maxLength={2000}
-        rows={3}
-        placeholder={dict.contractor.messagePlaceholder}
-      />
+      <FormField label={dict.contractor.messagePlaceholder} htmlFor="work-message" required>
+        <Textarea
+          id="work-message"
+          name="text"
+          required
+          maxLength={2000}
+          rows={3}
+        />
+      </FormField>
       <Button type="submit" disabled={pending}>
         {dict.contractor.send}
       </Button>

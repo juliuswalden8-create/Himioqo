@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { Dictionary } from "@/i18n/messages";
 import { addCleaningPhotosAction } from "@/lib/cleaning-actions";
 import { fileToDataUrl } from "@/lib/utils";
@@ -39,33 +41,16 @@ export function CleaningPhotoUpload({
         setPending(false);
       }}
     >
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setKind("before")}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            kind === "before" ? "bg-navy-800 text-white" : "bg-navy-50 text-navy-700"
-          }`}
-        >
-          {dict.dashboard.before}
-        </button>
-        <button
-          type="button"
-          onClick={() => setKind("after")}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            kind === "after" ? "bg-navy-800 text-white" : "bg-navy-50 text-navy-700"
-          }`}
-        >
-          {dict.dashboard.after}
-        </button>
-      </div>
-      <input
-        name="files"
-        type="file"
-        accept="image/*"
-        multiple
-        className="block w-full text-sm text-muted-foreground"
+      <SegmentedControl
+        name="photoKind"
+        value={kind}
+        onChange={(value) => setKind(value === "before" ? "before" : "after")}
+        options={[
+          { value: "before", label: dict.dashboard.before },
+          { value: "after", label: dict.dashboard.after },
+        ]}
       />
+      <Input name="files" type="file" accept="image/*" multiple />
       <Button type="submit" variant="secondary" disabled={pending}>
         {dict.cleaning.upload}
       </Button>
