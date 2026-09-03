@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import "./globals.css";
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className="min-h-dvh font-sans antialiased">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
