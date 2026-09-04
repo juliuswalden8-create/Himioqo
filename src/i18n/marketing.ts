@@ -437,7 +437,7 @@ export const marketingSv = {
         alt: "{name}, grundare av Homioqo",
       },
       coFounder: {
-        name: "Karl Fredrik Oliver Landen",
+        name: "Karl John Oliver Landen",
         role: "Medgrundare",
         alt: "{name}, medgrundare av Homioqo",
       },
@@ -922,7 +922,7 @@ export const marketingEn: MarketingCopy = {
         alt: "{name}, founder of Homioqo",
       },
       coFounder: {
-        name: "Karl Fredrik Oliver Landen",
+        name: "Karl John Oliver Landen",
         role: "Co-founder",
         alt: "{name}, co-founder of Homioqo",
       },
@@ -1405,7 +1405,7 @@ export const marketingEs: MarketingCopy = {
         alt: "{name}, fundador de Homioqo",
       },
       coFounder: {
-        name: "Karl Fredrik Oliver Landen",
+        name: "Karl John Oliver Landen",
         role: "Cofundador",
         alt: "{name}, cofundador de Homioqo",
       },
