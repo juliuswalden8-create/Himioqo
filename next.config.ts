@@ -14,9 +14,9 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      { source: "/favicon.ico", destination: "/icon.svg" },
-      { source: "/apple-touch-icon.png", destination: "/icon.svg" },
-      { source: "/apple-touch-icon-precomposed.png", destination: "/icon.svg" },
+      { source: "/favicon.ico", destination: "/brand/icon-48.png" },
+      { source: "/apple-touch-icon.png", destination: "/brand/apple-touch-icon.png" },
+      { source: "/apple-touch-icon-precomposed.png", destination: "/brand/apple-touch-icon.png" },
     ];
   },
 };

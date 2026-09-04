@@ -32,15 +32,43 @@ export default async function LandingPage({
   const dict = await getDictionary(locale);
   const initialAudience = resolveAudience((await searchParams).segment);
 
+  const origin = siteOrigin();
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Homioqo",
-    url: siteOrigin(),
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    description: dict.marketing.meta.description,
-    inLanguage: locale,
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${origin}/#organization`,
+        name: "Homioqo",
+        url: origin,
+        logo: {
+          "@type": "ImageObject",
+          url: `${origin}/brand/icon-192.png`,
+          width: 192,
+          height: 192,
+        },
+        email: "hej@homioqo.se",
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${origin}/#website`,
+        name: "Homioqo",
+        url: origin,
+        description: dict.marketing.meta.description,
+        inLanguage: locale,
+        publisher: { "@id": `${origin}/#organization` },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "Homioqo",
+        url: origin,
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        description: dict.marketing.meta.description,
+        inLanguage: locale,
+        publisher: { "@id": `${origin}/#organization` },
+      },
+    ],
   };
 
   return (

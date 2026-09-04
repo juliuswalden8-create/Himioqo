@@ -1,11 +1,11 @@
 export const marketingSv = {
   meta: {
-    title: "Homioqo – en digital gästguide för trygga vistelser",
+    title: "Homioqo – Digital gästguide via QR-kod",
     description:
-      "Ge gästen all viktig information bakom en QR-kod. Wi-Fi, husregler, hjälp och lokala rekommendationer – utan app. Du får bättre kontroll över boendet.",
-    ogTitle: "Homioqo – tryggare vistelser, enklare för dig",
+      "Skapa en digital gästguide via QR-kod med Wi-Fi, husregler, lokala tips och felanmälan. För värdar och uthyrare – helt utan app.",
+    ogTitle: "Homioqo – Digital gästguide via QR-kod",
     ogDescription:
-      "En digital gästguide för semesterboenden och förvaltare. Gästen skannar QR-koden och får allt de behöver.",
+      "Skapa en digital gästguide via QR-kod med Wi-Fi, husregler, lokala tips och felanmälan. För värdar och uthyrare – helt utan app.",
   },
   nav: {
     how: "Så fungerar det",
@@ -464,12 +464,12 @@ export type MarketingCopy = typeof marketingSv;
 
 export const marketingEn: MarketingCopy = {
   meta: {
-    title: "Homioqo – a digital guest guide for calmer stays",
+    title: "Homioqo – Digital guest guide via QR code",
     description:
-      "Give every guest the information they need behind one QR code. Wi-Fi, house rules, help and local tips – with no app. You stay in control.",
-    ogTitle: "Homioqo – calmer stays, simpler for you",
+      "Create a digital guest guide via QR code with Wi-Fi, house rules, local tips and issue reporting. For hosts and rental managers – no app needed.",
+    ogTitle: "Homioqo – Digital guest guide via QR code",
     ogDescription:
-      "A digital guest guide for holiday homes and property teams. Guests scan the QR code and find everything they need.",
+      "Create a digital guest guide via QR code with Wi-Fi, house rules, local tips and issue reporting. For hosts and rental managers – no app needed.",
   },
   nav: {
     how: "How it works",
@@ -913,12 +913,12 @@ export const marketingEn: MarketingCopy = {
 
 export const marketingEs: MarketingCopy = {
   meta: {
-    title: "Homioqo – una guía digital para estancias más tranquilas",
+    title: "Homioqo – Guía digital para huéspedes con código QR",
     description:
-      "Da a cada huésped la información que necesita detrás de un código QR. Wi-Fi, normas, ayuda y recomendaciones locales, sin app. Tú mantienes el control.",
-    ogTitle: "Homioqo – estancias más tranquilas, más simples para ti",
+      "Crea una guía digital para huéspedes con código QR: Wi-Fi, normas de la casa, consejos locales y aviso de incidencias. Para anfitriones y gestores – sin app.",
+    ogTitle: "Homioqo – Guía digital para huéspedes con código QR",
     ogDescription:
-      "Una guía digital para viviendas vacacionales y equipos de gestión. El huésped escanea el código QR y encuentra lo que necesita.",
+      "Crea una guía digital para huéspedes con código QR: Wi-Fi, normas de la casa, consejos locales y aviso de incidencias. Para anfitriones y gestores – sin app.",
   },
   nav: {
     how: "Cómo funciona",
