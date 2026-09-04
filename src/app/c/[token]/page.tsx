@@ -4,9 +4,11 @@ import { CleaningPhotoUpload } from "@/components/cleaning-photo-upload";
 import {
   CleanerStatusButtons,
   CleaningIssueForm,
+  CleaningTimeForm,
 } from "@/components/cleaning/cleaner-controls";
 import { CleaningStatusBadge } from "@/components/cleaning-status";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { interpolate } from "@/i18n/interpolate";
 import { toggleCheckAction } from "@/lib/cleaning-actions";
 import { getCleaningJobByToken } from "@/lib/data/store";
 import { formatDateTime } from "@/lib/format";
@@ -56,7 +58,12 @@ export default async function CleanerPortalPage({
           {!locked ? (
             <div className="mt-4">
               <CleanerStatusButtons token={token} current={job.status} dict={dict} />
+              <CleaningTimeForm token={token} minutes={job.minutesWorked} dict={dict} />
             </div>
+          ) : job.minutesWorked != null ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              {interpolate(dict.cleaning.minutesValue, { minutes: String(job.minutesWorked) })}
+            </p>
           ) : null}
 
           <ul className="mt-5 space-y-2">

@@ -317,5 +317,78 @@ create index on public.secure_links (token);
 create index on public.maintenance_cases (organization_id, status);
 create index on public.maintenance_cases (unit_id);
 
+-- ---------------------------------------------------------------------------
+-- Shared login / membership (app runtime still uses the in-memory store)
+-- ---------------------------------------------------------------------------
+
+alter table public.properties
+  add column if not exists guest_pin_hash text,
+  add column if not exists guest_link_expires_at timestamptz,
+  add column if not exists guest_link_revoked_at timestamptz,
+  add column if not exists report_token text unique;
+
+create table if not exists public.organization_memberships (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  role text not null check (role in ('host', 'owner', 'cleaner', 'contractor')),
+  property_ids uuid[] not null default '{}',
+  directory_id uuid,
+  revoked_at timestamptz
+);
+
+create table if not exists public.invitations (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  email text not null,
+  phone text,
+  role text not null check (role in ('owner', 'cleaner', 'contractor')),
+  property_ids uuid[] not null default '{}',
+  invited_by_user_id uuid not null references public.profiles(id),
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  accepted_at timestamptz,
+  revoked_at timestamptz,
+  channel text not null default 'email',
+  directory_id uuid
+);
+
+create table if not exists public.login_links (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  intended_role text,
+  intended_organization_id uuid references public.organizations(id) on delete cascade
+);
+
+-- Assignments already exist as public.assignments (maintenance) and cleaning jobs
+-- in the app store. Keep names aligned with the product:
+comment on table public.assignments is 'Maintenance assignments (contractor <-> case).';
+
+alter table public.organization_memberships enable row level security;
+alter table public.invitations enable row level security;
+alter table public.login_links enable row level security;
+
+create policy "org isolation memberships" on public.organization_memberships
+  for all using (organization_id = public.current_org_id());
+create policy "org isolation invitations" on public.invitations
+  for all using (organization_id = public.current_org_id());
+create policy "users read own login links" on public.login_links
+  for select using (
+    user_id in (select id from public.profiles where organization_id = public.current_org_id())
+  );
+
+create index if not exists organization_memberships_user_idx on public.organization_memberships (user_id);
+create index if not exists invitations_org_idx on public.invitations (organization_id, email);
+create index if not exists login_links_hash_idx on public.login_links (token_hash);
+
 -- Storage bucket for photos (create via dashboard or):
 -- insert into storage.buckets (id, name, public) values ('case-photos', 'case-photos', false);

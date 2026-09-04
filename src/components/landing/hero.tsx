@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AudienceToggle, useAudience } from "@/components/landing/audience";
-import { GuestGuidePhone } from "@/components/landing/guest-guide-phone";
 import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/i18n/messages";
 
@@ -38,17 +37,14 @@ export function Hero({ dict }: { dict: Dictionary }) {
 
         <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] sm:aspect-[5/4] lg:aspect-auto lg:min-h-[36rem]">
           <Image
-            src="/landing/hero-scan.jpg"
+            src="/landing/hero-guest-scan.jpg"
             alt={m.hero.imageAlt}
             fill
             priority
             sizes="(min-width: 1024px) 42vw, 100vw"
-            className="photo-brand object-cover"
+            className="photo-brand object-cover object-[70%_center]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-ocean/45 via-transparent to-transparent" />
-          <div className="absolute bottom-4 right-3 sm:bottom-6 sm:right-5">
-            <GuestGuidePhone dict={dict} label={dict.marketing.hero.phoneAlt} />
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-ocean/25 via-transparent to-transparent" />
         </div>
       </div>
     </section>

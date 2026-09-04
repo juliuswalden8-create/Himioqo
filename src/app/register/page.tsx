@@ -5,6 +5,7 @@ import { RegisterForm } from "@/components/register-form";
 import { SiteHeader } from "@/components/site-header";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { allCountries } from "@/lib/i18n/languages";
+import { roleHome } from "@/lib/access/roles";
 import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,10 @@ export default async function RegisterPage({
 }: {
   searchParams: Promise<{ segment?: string }>;
 }) {
-  if (await getSession()) redirect("/app");
+  if (await getSession()) {
+    const session = await getSession();
+    if (session) redirect(roleHome(session.role));
+  }
   const locale = await getLocale();
   const dict = await getDictionary(locale);
   const { segment } = await searchParams;

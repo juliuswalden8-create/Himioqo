@@ -39,12 +39,22 @@ export default async function StayInfoPage({
       <div className="mt-6 space-y-3">
         {guide.wifiName ? (
           <Section icon={Wifi} title={dict.guide.wifi}>
-            <Row label={dict.guide.wifiName} value={guide.wifiName} copy dict={dict} />
+            <Row label={dict.guide.wifiName} value={guide.wifiName} copy dict={dict} token={token} />
             {guide.wifiPassword ? (
-              <Row label={dict.guide.wifiPassword} value={guide.wifiPassword} copy dict={dict} />
+              <Row
+                label={dict.guide.wifiPassword}
+                value={guide.wifiPassword}
+                copy
+                dict={dict}
+                token={token}
+              />
             ) : null}
           </Section>
-        ) : null}
+        ) : (
+          <Section icon={Wifi} title={dict.guide.wifi}>
+            <p className="text-sm leading-relaxed text-muted-foreground">{dict.guide.wifiMissing}</p>
+          </Section>
+        )}
         {(guide.checkIn || guide.checkOut) ? (
           <Section icon={Clock} title={`${dict.guide.checkIn} · ${dict.guide.checkOut}`}>
             {guide.checkIn ? <Row label={dict.guide.checkIn} value={guide.checkIn} /> : null}
@@ -154,11 +164,13 @@ function Row({
   value,
   copy,
   dict,
+  token,
 }: {
   label: string;
   value: string;
   copy?: boolean;
   dict?: Dictionary;
+  token?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
@@ -166,7 +178,9 @@ function Row({
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="font-medium text-navy-800">{value}</p>
       </div>
-      {copy && dict ? <CopyButton value={value} dict={dict} /> : null}
+      {copy && dict ? (
+        <CopyButton value={value} dict={dict} token={token} trackKind={token ? "click_wifi" : undefined} />
+      ) : null}
     </div>
   );
 }

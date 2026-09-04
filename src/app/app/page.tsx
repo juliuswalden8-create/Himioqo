@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { AppListRow } from "@/components/app-list-row";
@@ -14,14 +13,18 @@ import {
   getDashboardStats,
   getOrganization,
   getProfile,
+  getUsageMetrics,
+  isTrialEnded,
   listCases,
+  listCleaners,
   listCleaningJobs,
   listCleaningNotifications,
+  listContractors,
   trialDaysLeft,
 } from "@/lib/data/store";
 import { formatTime } from "@/lib/format";
 import { greeting } from "@/lib/format";
-import { getSession } from "@/lib/session";
+import { requireHostSession } from "@/lib/session";
 import { bookOnboardingAction } from "@/lib/locale-actions";
 import { isToday, parseISO } from "date-fns";
 import type { Dictionary } from "@/i18n/messages";
@@ -35,22 +38,26 @@ function weekDelta(dict: Dictionary, value: number) {
 }
 
 export default async function OverviewPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const stats = getDashboardStats(session.organizationId);
+  const usage = getUsageMetrics(session.organizationId);
   const recent = listCases(session.organizationId).slice(0, 5);
   const cleaning = listCleaningJobs(session.organizationId).slice(0, 3);
   const notices = listCleaningNotifications(session.organizationId);
+  const contractors = listContractors(session.organizationId);
+  const cleaners = listCleaners(session.organizationId);
+  const showTeamHint = contractors.length === 0 && cleaners.length === 0;
   const locale = await getLocale();
   const dict = await getDictionary(profile?.locale || locale);
   const days = trialDaysLeft(session.organizationId);
+  const ended = isTrialEnded(session.organizationId);
   const trialLabel =
-    days === null
-      ? null
-      : days <= 0
-        ? dict.dashboard.trialEnded
+    ended
+      ? dict.dashboard.trialEnded
+      : days === null
+        ? null
         : days === 1
           ? dict.dashboard.trialToday
           : interpolate(dict.dashboard.trial, { days: String(days) });
@@ -107,17 +114,39 @@ export default async function OverviewPage() {
       <main className="container-page space-y-8 py-8">
         {trialLabel ? (
           <div className="flex flex-col gap-3 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-navy-800">{trialLabel}</p>
+            <div>
+              <p className="text-sm font-medium text-navy-800">{trialLabel}</p>
+              {ended ? (
+                <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.trialEndedHelp}</p>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-2">
-              <form action={bookOnboardingAction}>
-                <Button type="submit" size="sm" variant="secondary">
-                  {dict.dashboard.book}
+              {ended ? (
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/app/settings#billing">{dict.dashboard.trialEndedContact}</Link>
                 </Button>
-              </form>
+              ) : (
+                <form action={bookOnboardingAction}>
+                  <Button type="submit" size="sm" variant="secondary">
+                    {dict.dashboard.book}
+                  </Button>
+                </form>
+              )}
               <Button asChild size="sm" variant="cta">
                 <Link href="/app/settings#billing">{dict.dashboard.choosePlan}</Link>
               </Button>
             </div>
+          </div>
+        ) : null}
+        {showTeamHint ? (
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-soft sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-navy-800">{dict.dashboard.inviteTeam}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.inviteTeamHelp}</p>
+            </div>
+            <Button asChild size="sm">
+              <Link href="/app/settings#users">{dict.dashboard.inviteTeamCta}</Link>
+            </Button>
           </div>
         ) : null}
         {notice && noticeJob ? (
@@ -168,6 +197,56 @@ export default async function OverviewPage() {
               <p className="mt-2 text-xs text-muted-foreground">{weekDelta(dict, item.delta)}</p>
             </Link>
           ))}
+        </section>
+        <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+          <h2 className="text-sm font-semibold text-navy-800">{dict.dashboard.usage}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageHelp}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-2xl font-semibold text-navy-800">{usage.scans}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageScans}</p>
+            </div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-2xl font-semibold text-navy-800">{usage.reports}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageReports}</p>
+            </div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-2xl font-semibold text-navy-800">
+                {usage.avgResolutionHours == null
+                  ? "—"
+                  : interpolate(dict.dashboard.usageResolutionValue, {
+                      hours: String(usage.avgResolutionHours),
+                    })}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageResolution}</p>
+              {usage.avgResolutionHours == null ? (
+                <p className="mt-1 text-xs text-muted-foreground">{dict.dashboard.usageResolutionEmpty}</p>
+              ) : null}
+            </div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-2xl font-semibold text-navy-800">{usage.cleaningsCompleted}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageCleanings}</p>
+            </div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-2xl font-semibold text-navy-800">{usage.handledCases}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageHandled}</p>
+            </div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-2xl font-semibold text-navy-800">{usage.wifiCopies}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dict.dashboard.usageWifi}</p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-2xl bg-canvas p-4">
+            <p className="text-sm font-medium text-navy-800">{dict.dashboard.usageSelfServe}</p>
+            <p className="mt-1 text-sm text-navy-800">
+              {interpolate(dict.dashboard.usageSelfServeValue, {
+                views: String(usage.guideViews),
+                wifi: String(usage.wifiCopies),
+                reports: String(usage.reports),
+              })}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{dict.dashboard.usageSelfServeHelp}</p>
+          </div>
         </section>
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-border bg-white p-5 shadow-soft">

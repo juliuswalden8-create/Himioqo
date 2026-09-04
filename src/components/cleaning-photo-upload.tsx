@@ -11,9 +11,11 @@ import { MAX_PHOTOS } from "@/lib/constants";
 
 export function CleaningPhotoUpload({
   token,
+  jobId,
   dict,
 }: {
-  token: string;
+  token?: string;
+  jobId?: string;
   dict: Dictionary;
 }) {
   const [kind, setKind] = useState<"before" | "after">("after");
@@ -33,7 +35,8 @@ export function CleaningPhotoUpload({
           files.map(async (file) => ({ url: await fileToDataUrl(file) })),
         );
         const data = new FormData();
-        data.set("token", token);
+        data.set("token", token ?? "");
+        data.set("jobId", jobId ?? "");
         data.set("kind", kind);
         data.set("photos", JSON.stringify(photos));
         await addCleaningPhotosAction(data);

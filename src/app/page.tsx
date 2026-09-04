@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { MarketingSite } from "@/components/landing/marketing-site";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { resolveAudience } from "@/lib/audience";
+import { FOUNDER_FIRST_NAME } from "@/lib/constants";
 import { siteOrigin } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: m.ogDescription,
       locale,
       type: "website",
-      images: [{ url: "/landing/hero-scan.jpg", alt: dict.marketing.hero.imageAlt }],
+      images: [{ url: "/landing/hero-guest-scan.jpg", alt: dict.marketing.hero.imageAlt }],
     },
   };
 }
@@ -48,6 +49,11 @@ export default async function LandingPage({
           height: 192,
         },
         email: "hej@homioqo.se",
+        founder: {
+          "@type": "Person",
+          name: FOUNDER_FIRST_NAME,
+          jobTitle: dict.marketing.founder.role,
+        },
       },
       {
         "@type": "WebSite",

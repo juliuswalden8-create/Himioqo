@@ -3,13 +3,18 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import type { Dictionary } from "@/i18n/messages";
+import { recordGuideClickAction } from "@/lib/guide-actions";
 
 export function CopyButton({
   value,
   dict,
+  token,
+  trackKind,
 }: {
   value: string;
   dict: Dictionary;
+  token?: string;
+  trackKind?: "click_wifi";
 }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -19,6 +24,12 @@ export function CopyButton({
       onClick={async () => {
         await navigator.clipboard.writeText(value);
         setCopied(true);
+        if (token && trackKind) {
+          const data = new FormData();
+          data.set("token", token);
+          data.set("kind", trackKind);
+          void recordGuideClickAction(data);
+        }
         window.setTimeout(() => setCopied(false), 1600);
       }}
     >

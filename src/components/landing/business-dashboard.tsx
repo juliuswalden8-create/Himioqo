@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Bell, Building2, Camera, Check } from "lucide-react";
 import { LogoWordmark } from "@/components/brand/logo";
@@ -49,6 +50,33 @@ export function BusinessDashboard({ dict }: { dict: Dictionary }) {
         <h2 className="max-w-xl font-display text-3xl font-semibold text-ocean sm:text-4xl">
           {m.title}
         </h2>
+
+        <ul className="mt-10 grid gap-5 lg:grid-cols-2">
+          <li className="overflow-hidden rounded-[1.75rem] border border-sand-200 bg-white shadow-soft">
+            <div className="relative aspect-[16/10]">
+              <Image
+                src="/landing/host-control-panel.jpg"
+                alt={m.dashboardAlt}
+                fill
+                sizes="(min-width: 1024px) 38vw, 100vw"
+                className="photo-brand object-cover"
+              />
+            </div>
+            <p className="px-5 py-4 text-sm leading-relaxed text-navy-600">{m.dashboardCaption}</p>
+          </li>
+          <li className="overflow-hidden rounded-[1.75rem] border border-sand-200 bg-white shadow-soft">
+            <div className="relative aspect-[16/10]">
+              <Image
+                src="/landing/cleaner-before-after.jpg"
+                alt={m.workAlt}
+                fill
+                sizes="(min-width: 1024px) 38vw, 100vw"
+                className="photo-brand object-cover"
+              />
+            </div>
+            <p className="px-5 py-4 text-sm leading-relaxed text-navy-600">{m.workCaption}</p>
+          </li>
+        </ul>
 
         <div className="mt-10 overflow-hidden rounded-[1.75rem] border border-sand-200 bg-white shadow-lift">
           <div className="grid lg:grid-cols-[200px_1fr]">

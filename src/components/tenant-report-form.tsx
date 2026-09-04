@@ -40,20 +40,10 @@ export function TenantReportForm({
         const input = form.elements.namedItem("files") as HTMLInputElement;
         const files = [...(input.files ?? [])].slice(0, MAX_PHOTOS);
         const photos: { url: string; caption?: string }[] = [];
-        const notes: string[] = [];
         for (const file of files) {
-          if (file.type.startsWith("video/") && file.size > 1_500_000) {
-            notes.push(file.name);
-            continue;
-          }
+          if (!file.type.startsWith("image/")) continue;
           if (file.size > MAX_PHOTO_BYTES) continue;
           photos.push({ url: await fileToDataUrl(file), caption: file.name });
-        }
-        if (notes.length) {
-          data.set(
-            "description",
-            `${String(data.get("description") ?? "")}\n\n${notes.join(", ")}`,
-          );
         }
         data.set("photos", JSON.stringify(photos));
         data.set("category", category);
@@ -63,6 +53,11 @@ export function TenantReportForm({
     >
       <input type="hidden" name="propertyToken" value={token} />
       <input type="hidden" name="locale" value={locale} />
+      <div className="hidden" aria-hidden="true">
+        <label htmlFor="company_website">
+          <input id="company_website" name="company_website" tabIndex={-1} autoComplete="off" />
+        </label>
+      </div>
       <p className="text-sm text-muted-foreground">{propertyName}</p>
       <div className="grid grid-cols-2 gap-2">
         {CASE_CATEGORIES.map((item) => (
@@ -89,7 +84,7 @@ export function TenantReportForm({
           id="files"
           name="files"
           type="file"
-          accept="image/*,video/*"
+          accept="image/jpeg,image/png,image/webp"
           multiple
         />
       </FormField>

@@ -3,7 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
-import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/constants";
+import { roleHome } from "@/lib/access/roles";
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  LOGIN_LIMIT,
+  LOGIN_WINDOW_MS,
+  PASSWORD_RESET_TTL_HOURS,
+  REPORT_LIMIT,
+  REPORT_WINDOW_MS,
+} from "@/lib/constants";
+import { randomToken } from "@/lib/crypto";
+import { rateLimit } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/security/events";
+import { assertSameOrigin, honeypotFilled, requestIp } from "@/lib/security/request";
 import { hydrateAccountSnapshot } from "@/lib/account-snapshot";
 import {
   addAfterPhotos,
@@ -11,26 +24,34 @@ import {
   addMessage,
   approveCase,
   authenticate,
+  canAddProperty,
+  createPasswordResetToken,
   createProperty,
   createManagerCase,
+  consumePasswordResetToken,
+  getActiveMembership,
   getOrganizationLocale,
   getProfile,
+  getProfileByEmail,
   markInboxRead,
   markNotificationsRead,
   pushNotification,
   registerAccount,
   reopenCase,
   rotateWorkToken,
+  savePayPerHomeMonth,
   setCaseWorkOrder,
   submitReport,
   tenantConfirm,
   updateCasePriority,
   updateCaseStatus,
+  updateCaseDetails,
   updateOrganization,
+  setProfilePassword,
   updateProfile,
 } from "@/lib/data/store";
 import { priorityLabel, statusLabel } from "@/lib/labels";
-import { clearSession, requireSession, setSession } from "@/lib/session";
+import { clearSession, requireHostSession, setSession } from "@/lib/session";
 import {
   CASE_CATEGORIES,
   CASE_PRIORITIES,
@@ -39,10 +60,20 @@ import {
   type CaseCategory,
   type CasePriority,
   type CaseStatus,
-  type PropertyType,
 } from "@/lib/types";
+import { parsePropertyType } from "@/lib/types";
 import { parsePhotoPayload } from "@/lib/uploads";
 import { isValidEmail } from "@/lib/utils";
+import { z } from "zod";
+
+const reportSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(5000),
+  reporterName: z.string().trim().min(1).max(120),
+  reporterPhone: z.string().trim().min(1).max(40),
+  reporterEmail: z.string().trim().email().max(200),
+});
+import { notifyReporter } from "@/lib/case-notify";
 
 function revalidateAll() {
   revalidatePath("/", "layout");
@@ -62,9 +93,16 @@ export async function loginAction(
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const next = safeNextPath(String(formData.get("next") ?? "/app"));
+  if (!(await assertSameOrigin())) return { error: "generic" };
+  const ip = await requestIp();
+  if (!rateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS).ok) {
+    logSecurityEvent("rate_limited", { subject: "login" });
+    return { error: "login" };
+  }
   await hydrateAccountSnapshot();
   const profile = authenticate(email, password);
   if (!profile) {
+    logSecurityEvent("login_failed");
     return { error: "login" };
   }
   if (!profile.emailVerifiedAt) {
@@ -78,7 +116,10 @@ export async function loginAction(
   } catch {
     return { error: "generic" };
   }
-  redirect(next);
+  const membership = getActiveMembership(profile.id, profile.organizationId, "host")
+    ?? getActiveMembership(profile.id, profile.organizationId);
+  logSecurityEvent("login_ok", { subject: membership?.role ?? "host" });
+  redirect(membership ? (next === "/app" ? roleHome(membership.role) : next) : roleHome("host"));
 }
 
 export async function demoLoginAction() {
@@ -97,6 +138,7 @@ export async function demoLoginAction() {
 
 export async function logoutAction() {
   await clearSession();
+  logSecurityEvent("logout");
   redirect("/");
 }
 
@@ -132,20 +174,66 @@ export async function registerAction(formData: FormData) {
 export async function forgotPasswordAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   if (!isValidEmail(email)) return { error: "Ange en giltig e-postadress" };
+  const ip = await requestIp();
+  if (!rateLimit(`forgot:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS).ok) {
+    logSecurityEvent("rate_limited", { subject: "forgot" });
+    return { ok: true as const };
+  }
+  const profile = getProfileByEmail(email);
+  if (profile) {
+    const raw = randomToken(32);
+    createPasswordResetToken(profile.id, raw);
+    logSecurityEvent("password_reset_requested");
+    const { sendAccessEmail } = await import("@/lib/email/send");
+    const dict = await getDictionary(profile.locale || "sv");
+    const { requestUrl } = await import("@/lib/request-origin");
+    const url = await requestUrl(`/reset/${encodeURIComponent(raw)}`);
+    await sendAccessEmail({
+      to: profile.email,
+      subject: dict.forgot.title,
+      title: dict.forgot.title,
+      body: dict.forgot.body,
+      cta: dict.forgot.submit,
+      url,
+      ttl: `${PASSWORD_RESET_TTL_HOURS}h`,
+      dict,
+    });
+  }
   return { ok: true as const };
 }
 
+export async function resetPasswordAction(
+  _prev: { error?: string } | null,
+  formData: FormData,
+) {
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 8) return { error: "password" };
+  if (password !== confirm) return { error: "mismatch" };
+  const profile = consumePasswordResetToken(token);
+  if (!profile) return { error: "generic" };
+  setProfilePassword(profile.id, password);
+  logSecurityEvent("password_changed");
+  return { error: undefined as string | undefined, ok: true as const };
+}
+
 export async function createPropertyAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
+  const profile = getProfile(session.profileId);
+  const dict = await getDictionary(profile?.locale || "sv");
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const country = String(formData.get("country") ?? "Sverige").trim();
-  const tenantName = String(formData.get("tenantName") ?? "").trim();
-  if (!name || !address || !city || !tenantName) {
-    return { error: "Namn, adress, stad och hyresgäst krävs" };
+  const tenantName =
+    String(formData.get("tenantName") ?? "").trim() || dict.propertyForm.tenantDefault;
+  if (!name || !address || !city) {
+    return { error: "required" };
   }
-  const type = (String(formData.get("type") ?? "apartment") as PropertyType) || "apartment";
+  if (!canAddProperty(session.organizationId)) {
+    return { error: "propertyLimit" };
+  }
   const property = createProperty(session.organizationId, {
     name,
     address,
@@ -155,7 +243,7 @@ export async function createPropertyAction(formData: FormData) {
     imageUrl:
       String(formData.get("imageUrl") ?? "").trim() ||
       "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80",
-    type,
+    type: parsePropertyType(String(formData.get("type") ?? "")),
     sqm: Number(formData.get("sqm") ?? 0) || 0,
     rooms: Number(formData.get("rooms") ?? 0) || 0,
     tenantName,
@@ -171,6 +259,14 @@ export async function createPropertyAction(formData: FormData) {
 }
 
 export async function submitReportAction(formData: FormData) {
+  if (honeypotFilled(formData)) {
+    redirect("/t/ok?new=1");
+  }
+  const ip = await requestIp();
+  if (!rateLimit(`report:${ip}`, REPORT_LIMIT, REPORT_WINDOW_MS).ok) {
+    logSecurityEvent("rate_limited", { subject: "report" });
+    return { error: "generic" };
+  }
   const category = String(formData.get("category") ?? "other") as CaseCategory;
   const priority = String(formData.get("priority") ?? "soon") as CasePriority;
   const title = String(formData.get("title") ?? "").trim();
@@ -180,7 +276,14 @@ export async function submitReportAction(formData: FormData) {
   if (!GUEST_PRIORITIES.includes(priority as (typeof GUEST_PRIORITIES)[number])) {
     return { error: "priority" };
   }
-  if (!title || !description) return { error: "required" };
+  const fields = reportSchema.safeParse({
+    title,
+    description,
+    reporterName: String(formData.get("reporterName") ?? ""),
+    reporterPhone: String(formData.get("reporterPhone") ?? ""),
+    reporterEmail: String(formData.get("reporterEmail") ?? ""),
+  });
+  if (!fields.success) return { error: "required" };
 
   const parsed = parsePhotoPayload(formData.get("photos"));
   if (!parsed.ok) return { error: parsed.reason };
@@ -191,13 +294,13 @@ export async function submitReportAction(formData: FormData) {
       propertyToken: String(formData.get("propertyToken") ?? ""),
       category,
       priority,
-      title: title.slice(0, 200),
-      description: description.slice(0, 5000),
+      title: fields.data.title,
+      description: fields.data.description,
       discoveredAt: String(formData.get("discoveredAt") ?? new Date().toISOString()),
       stillOngoing: String(formData.get("stillOngoing") ?? "true") === "true",
-      reporterName: String(formData.get("reporterName") ?? "").trim().slice(0, 120),
-      reporterPhone: String(formData.get("reporterPhone") ?? "").trim().slice(0, 40),
-      reporterEmail: String(formData.get("reporterEmail") ?? "").trim().slice(0, 200),
+      reporterName: fields.data.reporterName,
+      reporterPhone: fields.data.reporterPhone,
+      reporterEmail: fields.data.reporterEmail,
       photos: parsed.photos,
       locale: String(formData.get("locale") ?? "sv"),
     });
@@ -229,7 +332,7 @@ async function actingManager(profileId: string) {
 }
 
 export async function changeStatusAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const { name, dict } = await actingManager(session.profileId);
   const status = String(formData.get("status") ?? "") as CaseStatus;
   if (!CASE_STATUSES.includes(status)) return { error: "status" };
@@ -240,11 +343,12 @@ export async function changeStatusAction(formData: FormData) {
     name,
     statusLabel(dict, status),
   );
+  await notifyReporter(session.organizationId, String(formData.get("caseId") ?? ""), status);
   revalidateAll();
 }
 
 export async function changePriorityAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const { name, dict } = await actingManager(session.profileId);
   const priority = String(formData.get("priority") ?? "") as CasePriority;
   if (!CASE_PRIORITIES.includes(priority)) return { error: "priority" };
@@ -258,8 +362,27 @@ export async function changePriorityAction(formData: FormData) {
   revalidateAll();
 }
 
+export async function saveCaseDetailsAction(formData: FormData) {
+  const session = await requireHostSession();
+  const { name } = await actingManager(session.profileId);
+  const dueRaw = String(formData.get("dueAt") ?? "").trim();
+  const costRaw = String(formData.get("costEstimate") ?? "").trim();
+  const dueAt = dueRaw ? new Date(dueRaw).toISOString() : null;
+  const costEstimate = costRaw === "" ? null : Number(costRaw);
+  if (costEstimate !== null && (!Number.isFinite(costEstimate) || costEstimate < 0)) {
+    return { error: "generic" as const };
+  }
+  updateCaseDetails(
+    session.organizationId,
+    String(formData.get("caseId") ?? ""),
+    { dueAt, costEstimate },
+    name,
+  );
+  revalidateAll();
+}
+
 export async function assignContractorAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const { name } = await actingManager(session.profileId);
   const contractorId = String(formData.get("contractorId") ?? "");
   const instructions = formData.get("instructions");
@@ -278,13 +401,13 @@ export async function assignContractorAction(formData: FormData) {
 }
 
 export async function rotateWorkTokenAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   rotateWorkToken(session.organizationId, String(formData.get("caseId") ?? ""));
   revalidateAll();
 }
 
 export async function addCaseNoteAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const { name } = await actingManager(session.profileId);
   const text = String(formData.get("text") ?? "").trim();
   if (!text) return { error: "empty" };
@@ -294,7 +417,7 @@ export async function addCaseNoteAction(formData: FormData) {
 }
 
 export async function approveCaseAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const { name, dict } = await actingManager(session.profileId);
   const caseId = String(formData.get("caseId") ?? "");
   const item = approveCase(session.organizationId, caseId, name);
@@ -305,11 +428,12 @@ export async function approveCaseAction(formData: FormData) {
     body: `${item.reference} · ${item.property.name}`,
     href: `/app/cases/${item.id}`,
   });
+  await notifyReporter(session.organizationId, caseId, item.status);
   revalidateAll();
 }
 
 export async function reopenCaseAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const { name, dict } = await actingManager(session.profileId);
   const caseId = String(formData.get("caseId") ?? "");
   const item = reopenCase(session.organizationId, caseId, name);
@@ -320,18 +444,19 @@ export async function reopenCaseAction(formData: FormData) {
     body: `${item.reference} · ${item.property.name}`,
     href: `/app/cases/${item.id}`,
   });
+  await notifyReporter(session.organizationId, caseId, item.status);
   revalidateAll();
 }
 
 export async function markNotificationsReadAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const id = String(formData.get("id") ?? "");
   markNotificationsRead(session.organizationId, id || undefined);
   revalidateAll();
 }
 
 export async function sendOwnerMessageAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   const text = String(formData.get("text") ?? "").trim();
   if (!text) return;
@@ -361,7 +486,7 @@ export async function sendTenantMessageAction(formData: FormData) {
 }
 
 export async function markResolvedAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   updateCaseStatus(
     session.organizationId,
@@ -373,7 +498,7 @@ export async function markResolvedAction(formData: FormData) {
 }
 
 export async function addAfterPhotosAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   const photosRaw = String(formData.get("photos") ?? "[]");
   let photos: { url: string; caption?: string }[] = [];
@@ -401,13 +526,13 @@ export async function tenantConfirmAction(formData: FormData) {
 }
 
 export async function markThreadReadAction(caseId: string) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   markInboxRead(session.organizationId, caseId);
   revalidateAll();
 }
 
 export async function createManagerCaseAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   const category = String(formData.get("category") ?? "other") as CaseCategory;
   const priority = String(formData.get("priority") ?? "normal") as CasePriority;
@@ -442,7 +567,7 @@ export async function createManagerCaseAction(formData: FormData) {
 }
 
 export async function updateSettingsAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   updateOrganization(session.organizationId, {
     name: String(formData.get("organizationName") ?? "").trim(),
     supportEmail: String(formData.get("supportEmail") ?? "").trim(),
@@ -458,8 +583,21 @@ export async function updateSettingsAction(formData: FormData) {
   redirect("/app/settings?saved=1");
 }
 
+const PAY_BANDS = ["under10", "10-14", "14-20", "20plus", "unsure"] as const;
+
+export async function savePayPerHomeAction(formData: FormData) {
+  const session = await requireHostSession();
+  const value = String(formData.get("payPerHomeMonth") ?? "").trim();
+  if (!PAY_BANDS.includes(value as (typeof PAY_BANDS)[number])) {
+    redirect("/app/settings#billing");
+  }
+  savePayPerHomeMonth(session.organizationId, value);
+  revalidateAll();
+  redirect("/app/settings?saved=1#billing");
+}
+
 export async function updateNotificationSettingsAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   updateProfile(session.profileId, {
     marketingConsent: formData.get("marketingConsent") === "on",
     notifyCases: formData.get("notifyCases") === "on",

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { AppListRow } from "@/components/app-list-row";
 import { ReadyBadge } from "@/components/cleaning-status";
@@ -7,21 +6,24 @@ import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
 import { HealthBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { FormField } from "@/components/ui/field";
+import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { interpolate } from "@/i18n/interpolate";
 import { createPropertyAction } from "@/lib/guide-actions";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 import {
+  canAddProperty,
   getOrganization,
   getProfile,
   getPropertyTraffic,
   listProperties,
   propertyFilterOptions,
 } from "@/lib/data/store";
-import { healthLabel } from "@/lib/labels";
-import { getSession } from "@/lib/session";
-import { PROPERTY_HEALTH, type PropertyHealth } from "@/lib/types";
+import { healthLabel, propertyTypeLabel } from "@/lib/labels";
+import { requireHostSession } from "@/lib/session";
+import { PROPERTY_HEALTH, PROPERTY_TYPES, type PropertyHealth } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +32,7 @@ export default async function PropertiesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
@@ -56,6 +57,8 @@ export default async function PropertiesPage({
   });
   const hasFilters = Boolean(query) || city !== "all" || health !== "all";
   const allOption = { value: "all", label: dict.filters.all };
+  const atLimit = !canAddProperty(session.organizationId);
+  const limitHit = one("limit") === "1" || atLimit;
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -67,9 +70,11 @@ export default async function PropertiesPage({
             count: String(properties.length),
           })}
           actions={
-            <Button asChild variant="cta">
-              <a href="#create">{dict.homes.addHome}</a>
-            </Button>
+            atLimit ? null : (
+              <Button asChild variant="cta">
+                <a href="#create">{dict.homes.addHome}</a>
+              </Button>
+            )
           }
         />
 
@@ -183,6 +188,15 @@ export default async function PropertiesPage({
           className="scroll-mt-24 rounded-2xl border border-border bg-white p-5 shadow-soft"
         >
           <h2 className="text-sm font-semibold text-navy-800">{dict.homes.newHome}</h2>
+          {limitHit ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm font-medium text-navy-800">{dict.homes.limitTitle}</p>
+              <p className="text-sm text-muted-foreground">{dict.homes.limitHelp}</p>
+              <Button asChild variant="cta">
+                <a href={`mailto:${SUPPORT_EMAIL}`}>{dict.homes.limitCta}</a>
+              </Button>
+            </div>
+          ) : (
           <form action={createPropertyAction} className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
             <FormField label={dict.propertyForm.name} htmlFor="name" required className="sm:col-span-2">
               <Input id="name" name="name" required />
@@ -193,8 +207,33 @@ export default async function PropertiesPage({
             <FormField label={dict.propertyForm.city} htmlFor="city" required>
               <Input id="city" name="city" required />
             </FormField>
-            <FormField label={dict.propertyForm.tenant} htmlFor="tenantName" required className="sm:col-span-2">
-              <Input id="tenantName" name="tenantName" required />
+            <FormField label={dict.propertyForm.type} htmlFor="type">
+              <NativeSelect id="type" name="type" defaultValue="apartment">
+                {PROPERTY_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {propertyTypeLabel(dict, type)}
+                  </option>
+                ))}
+              </NativeSelect>
+            </FormField>
+            <FormField
+              label={dict.propertyForm.tenant}
+              htmlFor="tenantName"
+              hint={dict.propertyForm.tenantHelp}
+            >
+              <Input
+                id="tenantName"
+                name="tenantName"
+                placeholder={dict.propertyForm.tenantDefault}
+              />
+            </FormField>
+            <FormField
+              label={dict.propertyForm.notes}
+              htmlFor="notes"
+              hint={dict.propertyForm.notesHelp}
+              className="sm:col-span-2"
+            >
+              <Textarea id="notes" name="notes" />
             </FormField>
             <div className="sm:col-span-2">
               <Button type="submit" variant="cta">
@@ -202,6 +241,7 @@ export default async function PropertiesPage({
               </Button>
             </div>
           </form>
+          )}
         </section>
       </main>
     </div>

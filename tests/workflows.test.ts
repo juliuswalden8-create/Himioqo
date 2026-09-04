@@ -7,6 +7,7 @@ import {
   contractorAddPhotos,
   contractorRespond,
   contractorUpdateStatus,
+  copyPropertyGuide,
   createCleaningJob,
   createManagerCase,
   createOwnerAccess,
@@ -21,6 +22,7 @@ import {
   getProperty,
   getPropertyByToken,
   getPropertyTraffic,
+  getUsageMetrics,
   listCases,
   listCleaners,
   listContractors,
@@ -36,7 +38,12 @@ import {
   submitReport,
   toggleCleaningItem,
   updateCleaningStatus,
+  updateProperty,
+  updatePropertyGuide,
+  updateCaseDetails,
+  recordCleaningMinutes,
 } from "@/lib/data/store";
+import { parsePropertyType } from "@/lib/types";
 
 const ORG = "org_bergstrom";
 const MANAGER = "Anna Bergström";
@@ -116,6 +123,53 @@ describe("property management", () => {
     const guide = getGuestGuide(created.reportToken);
     expect(guide?.property.name).toBe("QR Test");
     expect(guide?.guide.checkIn).toBeTruthy();
+    expect(guide?.guide.wifiName).toBe("");
+  });
+
+  it("stores property type and internal notes without exposing them on the guest guide", () => {
+    expect(parsePropertyType("villa")).toBe("villa");
+    expect(parsePropertyType("castle")).toBe("apartment");
+
+    const created = createProperty(ORG, {
+      name: "Notes Test",
+      address: "Hidden 1",
+      city: "Malmö",
+      country: "Sverige",
+      countryCode: "SE",
+      imageUrl: "",
+      type: parsePropertyType("house"),
+      sqm: 80,
+      rooms: 3,
+      tenantName: "Guest",
+      tenantEmail: "secret@example.com",
+      tenantPhone: "+46700000000",
+      notes: "Do not show this to guests",
+      leaseStart: new Date().toISOString(),
+      leaseEnd: new Date().toISOString(),
+      lastInspection: new Date().toISOString(),
+    });
+
+    const stored = getProperty(ORG, created.id);
+    expect(stored?.type).toBe("house");
+    expect(stored?.notes).toBe("Do not show this to guests");
+
+    updateProperty(ORG, created.id, { type: "villa", notes: "Still internal" });
+    expect(getProperty(ORG, created.id)?.type).toBe("villa");
+
+    updatePropertyGuide(ORG, created.id, {
+      wifiName: "HomioqoGuest",
+      wifiPassword: "welcome",
+      houseRules: { sv: "Inga skor inne." },
+    });
+
+    const guide = getGuestGuide(created.reportToken);
+    expect(guide?.guide.wifiName).toBe("HomioqoGuest");
+    expect(guide?.guide.houseRules.sv).toBe("Inga skor inne.");
+    expect(guide?.property).not.toHaveProperty("notes");
+    expect(guide?.property).not.toHaveProperty("tenantEmail");
+    expect(guide?.property).not.toHaveProperty("tenantPhone");
+    expect(guide?.property).not.toHaveProperty("type");
+    expect(guide?.org).not.toHaveProperty("plan");
   });
 
   it("supports search and filtering", () => {
@@ -630,4 +684,73 @@ describe("manager dashboard helpers", () => {
       }),
     );
   });
+
+  it("summarises workspace usage without exposing conversion to paid", () => {
+    const usage = getUsageMetrics(ORG);
+    expect(usage.scans).toBeGreaterThan(0);
+    expect(usage.reports).toBeGreaterThan(0);
+    expect(usage.propertiesCreated).toBeGreaterThan(0);
+    expect(usage.propertiesWithWifi).toBeGreaterThan(0);
+    expect(usage.billed).toBe(false);
+  });
 });
+
+describe("ticket details and cleaning time", () => {
+  it("stores a deadline and cost estimate without leaking them to the guest guide", () => {
+    const home = listProperties(ORG)[0]!;
+    const created = createManagerCase({
+      organizationId: ORG,
+      propertyId: home.id,
+      category: "other",
+      priority: "soon",
+      title: "Costed job",
+      description: "Needs a quote.",
+      reporterName: MANAGER,
+    });
+    const dueAt = new Date("2026-09-10T12:00:00.000Z").toISOString();
+    const updated = updateCaseDetails(ORG, created.id, { dueAt, costEstimate: 2500 }, MANAGER);
+    expect(updated.dueAt).toBe(dueAt);
+    expect(updated.costEstimate).toBe(2500);
+
+    const guide = getGuestGuide(home.reportToken);
+    expect(guide).toBeDefined();
+    expect(JSON.stringify(guide)).not.toContain("2500");
+    expect(JSON.stringify(guide)).not.toContain(dueAt);
+  });
+
+  it("copies wifi and rules from one home to another", () => {
+    const homes = listProperties(ORG);
+    const from = homes[0]!;
+    const to = homes[1]!;
+    updatePropertyGuide(ORG, from.id, {
+      wifiName: "CopyNet",
+      wifiPassword: "secret",
+      houseRules: { sv: "Inga fester." },
+    });
+    copyPropertyGuide(ORG, from.id, to.id);
+    const copied = getGuestGuide(to.reportToken);
+    expect(copied?.guide.wifiName).toBe("CopyNet");
+    expect(copied?.guide.houseRules.sv).toBe("Inga fester.");
+    expect(copied?.property.name).toBe(to.name);
+  });
+
+  it("records cleaner time when a job is completed", () => {
+    const home = listProperties(ORG)[0]!;
+    const cleaner = listCleaners(ORG)[0]!;
+    const job = createCleaningJob({
+      organizationId: ORG,
+      propertyId: home.id,
+      cleanerId: cleaner.id,
+      scheduledAt: new Date().toISOString(),
+      instructions: "Standard",
+      labels: { kitchen: "Kök" },
+    });
+    updateCleaningStatus(job.accessToken, "in_progress", true);
+    recordCleaningMinutes(job.accessToken, 75);
+    const done = updateCleaningStatus(job.accessToken, "completed", true);
+    expect(done.startedAt).toBeTruthy();
+    expect(done.minutesWorked).toBe(75);
+    expect(done.completedAt).toBeTruthy();
+  });
+});
+

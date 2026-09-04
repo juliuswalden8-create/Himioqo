@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { FALLBACK_LOCALE, LOCALE_COOKIE } from "@/lib/constants";
 import { normalizeLocale } from "@/lib/i18n/languages";
 import { builtinDictionary, en, sv, type Dictionary } from "@/i18n/messages";
@@ -14,7 +14,11 @@ function dictCache() {
 
 export async function getLocale() {
   const jar = await cookies();
-  return normalizeLocale(jar.get(LOCALE_COOKIE)?.value);
+  const cookie = jar.get(LOCALE_COOKIE)?.value;
+  if (cookie) return normalizeLocale(cookie);
+  const header = (await headers()).get("accept-language") ?? "";
+  const first = header.split(",")[0]?.split(";")[0]?.trim();
+  return normalizeLocale(first);
 }
 
 export async function getDictionary(locale?: string): Promise<Dictionary> {

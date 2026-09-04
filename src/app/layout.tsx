@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "Homioqo",
       locale,
       type: "website",
-      images: [{ url: "/landing/hero-scan.jpg", alt: dict.marketing.hero.imageAlt }],
+      images: [{ url: "/landing/hero-guest-scan.jpg", alt: dict.marketing.hero.imageAlt }],
     },
     twitter: {
       card: "summary_large_image",

@@ -60,6 +60,11 @@ export default async function CleaningDetailPage({
               <p className="mt-1 text-sm text-muted-foreground">
                 {dict.cleaning.when}: {formatDateTime(job.scheduledAt)}
               </p>
+              {job.minutesWorked != null ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {interpolate(dict.cleaning.minutesValue, { minutes: String(job.minutesWorked) })}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col items-end gap-2">
               {job.status === "completed" || job.status === "approved" ? null : job.property.guestReady ? (

@@ -58,6 +58,14 @@ export type PropertyHealth = (typeof PROPERTY_HEALTH)[number];
 export const PROPERTY_TYPES = ["apartment", "house", "villa"] as const;
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
 
+export function isPropertyType(value: string): value is PropertyType {
+  return (PROPERTY_TYPES as readonly string[]).includes(value);
+}
+
+export function parsePropertyType(value: string, fallback: PropertyType = "apartment"): PropertyType {
+  return isPropertyType(value) ? value : fallback;
+}
+
 export const MESSAGE_AUTHORS = ["owner", "tenant", "contractor", "system"] as const;
 export type MessageAuthor = (typeof MESSAGE_AUTHORS)[number];
 
@@ -99,8 +107,12 @@ export interface Organization extends BaseRecord {
   plan: Plan;
   trialEndsAt?: string;
   billed: boolean;
+  /** Julius marks this after a paid or finished pilot — lifts the 5-home trial cap. */
+  pilotComplete?: boolean;
   qrAllowance: number;
   onboardingBookedAt?: string;
+  /** Host-only research answer: what they would pay per home / month. Not a charge. */
+  payPerHomeMonth?: string;
 }
 
 export interface Profile extends BaseRecord {
@@ -118,6 +130,8 @@ export interface Profile extends BaseRecord {
   emailVerifiedAt?: string;
   onboardingCompletedAt?: string;
   passwordHash?: string;
+  /** Incremented on logout and password change so older cookies stop working. */
+  sessionVersion?: number;
   notifyCases?: boolean;
   notifyCleaning?: boolean;
   notifyUrgent?: boolean;
@@ -128,6 +142,7 @@ export interface VerificationToken extends BaseRecord {
   tokenHash: string;
   expiresAt: string;
   usedAt?: string;
+  purpose?: "verify" | "reset";
 }
 
 export interface AdminNotice extends BaseRecord {
@@ -135,6 +150,25 @@ export interface AdminNotice extends BaseRecord {
   emailMasked: string;
   companyName: string;
   locale: string;
+}
+
+export const QR_SIGN_ORDER_STATUSES = ["open", "fulfilled"] as const;
+export type QrSignOrderStatus = (typeof QR_SIGN_ORDER_STATUSES)[number];
+
+/** Host request for a physical printed QR sign. Not a completed card payment. */
+export interface QrSignOrder extends BaseRecord {
+  organizationId: string;
+  propertyId: string;
+  qrToken: string;
+  status: QrSignOrderStatus;
+  priceEur: number;
+  shippingName: string;
+  shippingAddress: string;
+  shippingPostalCode: string;
+  shippingCity: string;
+  shippingPhone: string;
+  shippingEmail: string;
+  orderedByProfileId: string;
 }
 
 export interface PropertyDocument {
@@ -174,6 +208,10 @@ export interface Property extends BaseRecord {
   inspectionPhotos: InspectionPhoto[];
   guestReady?: boolean;
   nextCheckoutAt?: string;
+  /** Optional PIN/booking code hash. Empty means the public guide is open. */
+  guestPinHash?: string;
+  guestLinkExpiresAt?: string;
+  guestLinkRevokedAt?: string;
 }
 
 export interface Contractor extends BaseRecord {
@@ -236,6 +274,10 @@ export interface MaintenanceCase extends BaseRecord {
   approvedAt?: string;
   /** Manager instructions shown to the contractor. Never shown to guests/owners. */
   workInstructions?: string;
+  /** Host-set deadline. Never shown on public guest pages. */
+  dueAt?: string;
+  /** Host-entered estimate. Never invented; shown to host and owner only. */
+  costEstimate?: number;
 }
 
 /** Manager-only. Never rendered on guest, contractor or owner surfaces. */
@@ -267,6 +309,7 @@ export const NOTIFICATION_KINDS = [
   "property_ready",
   "case_approved",
   "case_reopened",
+  "qr_sign_ordered",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -331,6 +374,21 @@ export interface DashboardStats {
     resolvedThisMonth: number;
     urgentCases: number;
   };
+}
+
+/** Product-usage counts for hosts. Conversion to paid stays unknown until billing exists. */
+export interface UsageMetrics {
+  scans: number;
+  reports: number;
+  avgResolutionHours: number | null;
+  cleaningsCompleted: number;
+  handledCases: number;
+  wifiCopies: number;
+  guideViews: number;
+  propertiesCreated: number;
+  propertiesWithWifi: number;
+  trial: boolean;
+  billed: boolean;
 }
 
 export interface MonthDatum {
@@ -439,7 +497,9 @@ export interface CleaningJob extends BaseRecord {
   scheduledAt: string;
   instructions: string;
   checklist: CleaningChecklistItem[];
+  startedAt?: string;
   completedAt?: string;
+  minutesWorked?: number;
   approvedAt?: string;
   returnedAt?: string;
   returnComment?: string;
@@ -515,6 +575,7 @@ export const GUIDE_EVENT_KINDS = [
   "click_website",
   "click_discount",
   "click_phone",
+  "click_wifi",
 ] as const;
 export type GuideEventKind = (typeof GUIDE_EVENT_KINDS)[number];
 
@@ -612,4 +673,47 @@ export interface PropertyTraffic {
   guideOpens: number;
   reports: number;
   contactClicks: number;
+}
+
+/** Logged-in staff roles. Guests never get an account. */
+export const STAFF_ROLES = ["host", "owner", "cleaner", "contractor"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export const LOGIN_INTENTS = ["host", "cleaner", "contractor"] as const;
+export type LoginIntent = (typeof LOGIN_INTENTS)[number];
+
+export interface Membership extends BaseRecord {
+  userId: string;
+  organizationId: string;
+  role: StaffRole;
+  /** Empty means every property in the organisation (hosts). */
+  propertyIds: string[];
+  /** Linked cleaner or contractor directory row, when this membership is staff. */
+  directoryId?: string;
+  revokedAt?: string;
+}
+
+export interface Invitation extends BaseRecord {
+  organizationId: string;
+  email: string;
+  phone?: string;
+  role: StaffRole;
+  propertyIds: string[];
+  invitedByUserId: string;
+  tokenHash: string;
+  expiresAt: string;
+  acceptedAt?: string;
+  revokedAt?: string;
+  channel: "email" | "sms" | "link";
+  /** Existing cleaner/contractor directory row, when the host picked one. */
+  directoryId?: string;
+}
+
+export interface LoginLink extends BaseRecord {
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+  usedAt?: string;
+  intendedRole?: StaffRole;
+  intendedOrganizationId?: string;
 }

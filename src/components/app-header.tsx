@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
+import { RoleSwitcher } from "@/components/role-switcher";
 import type { Dictionary } from "@/i18n/messages";
 import { interpolate } from "@/i18n/interpolate";
 import { logoutAction } from "@/lib/actions";
-import { unreadNotificationCount } from "@/lib/data/store";
+import { getOrganization, listMembershipsForUser, unreadNotificationCount } from "@/lib/data/store";
 import { getSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,11 @@ export async function AppHeader({
   // without each one having to remember to fetch it.
   const session = await getSession();
   const unreadCount = session ? unreadNotificationCount(session.organizationId) : 0;
+  const memberships = session ? listMembershipsForUser(session.profileId) : [];
+  const switcherOptions = memberships.map((item) => ({
+    id: item.id,
+    label: `${getOrganization(item.organizationId)?.name ?? ""} · ${dict.access.roles[item.role]}`,
+  }));
 
   const links = [
     { href: "/app", id: "overview" as const, label: dict.nav.overview },
@@ -71,6 +77,9 @@ export async function AppHeader({
               {dict.nav.logout}
             </button>
           </form>
+          {switcherOptions.length > 1 && session ? (
+            <RoleSwitcher dict={dict} currentId={session.membershipId} options={switcherOptions} />
+          ) : null}
           <p className="hidden truncate text-sm text-muted-foreground sm:block">{orgName}</p>
         </div>
       </div>

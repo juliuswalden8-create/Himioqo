@@ -15,6 +15,8 @@ export default async function AppGroupLayout({ children }: { children: ReactNode
   if (!session) redirect("/login");
   const profile = getProfile(session.profileId);
   if (profile && !profile.emailVerifiedAt) redirect("/register/check-email");
-  if (profile && !profile.onboardingCompletedAt) redirect("/onboarding");
+  if (session.role === "host" && profile && !profile.onboardingCompletedAt) {
+    redirect("/onboarding");
+  }
   return children;
 }

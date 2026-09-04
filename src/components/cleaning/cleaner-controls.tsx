@@ -2,18 +2,21 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { FormError, NativeCheckbox, NativeSelect } from "@/components/ui/field";
+import { FormError, FormField, NativeCheckbox, NativeSelect } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
-import { cleanerStatusAction, reportCleaningIssueAction } from "@/lib/cleaning-actions";
+import { cleanerStatusAction, recordCleaningMinutesAction, reportCleaningIssueAction } from "@/lib/cleaning-actions";
 import type { CleaningStatus } from "@/lib/types";
 
 export function CleanerStatusButtons({
   token,
+  jobId,
   current,
   dict,
 }: {
-  token: string;
+  token?: string;
+  jobId?: string;
   current: CleaningStatus;
   dict: Dictionary;
 }) {
@@ -30,7 +33,8 @@ export function CleanerStatusButtons({
         <form
           key={status}
           action={(data) => {
-            data.set("token", token);
+            data.set("token", token ?? "");
+            data.set("jobId", jobId ?? "");
             data.set("status", status);
             start(async () => {
               await cleanerStatusAction(data);
@@ -52,11 +56,56 @@ export function CleanerStatusButtons({
   );
 }
 
-export function CleaningIssueForm({
+export function CleaningTimeForm({
   token,
+  jobId,
+  minutes,
   dict,
 }: {
-  token: string;
+  token?: string;
+  jobId?: string;
+  minutes?: number;
+  dict: Dictionary;
+}) {
+  const [pending, start] = useTransition();
+
+  return (
+    <form
+      className="mt-4 space-y-3"
+      action={(data) => {
+        data.set("token", token ?? "");
+        data.set("jobId", jobId ?? "");
+        start(async () => {
+          await recordCleaningMinutesAction(data);
+        });
+      }}
+    >
+      <FormField label={dict.cleaning.minutes} htmlFor="cleaning-minutes" hint={dict.cleaning.minutesHelp}>
+        <Input
+          id="cleaning-minutes"
+          name="minutes"
+          type="number"
+          min={0}
+          max={1440}
+          step={1}
+          defaultValue={minutes?.toString() ?? ""}
+          required
+        />
+      </FormField>
+      <Button type="submit" variant="secondary" className="h-11 w-full" disabled={pending}>
+        {dict.cleaning.minutesSave}
+      </Button>
+    </form>
+  );
+}
+
+export function CleaningIssueForm({
+  token,
+  jobId,
+  dict,
+}: {
+  token?: string;
+  jobId?: string;
   dict: Dictionary;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +115,8 @@ export function CleaningIssueForm({
     <form
       className="mt-6 space-y-3"
       action={(data) => {
-        data.set("token", token);
+        data.set("token", token ?? "");
+        data.set("jobId", jobId ?? "");
         setError(null);
         start(async () => {
           const result = await reportCleaningIssueAction(data);

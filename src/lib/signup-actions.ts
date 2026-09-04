@@ -24,10 +24,13 @@ import {
   exportAccount,
   getOrganization,
   getProfile,
+  listProperties,
   peekDevVerifyToken,
   registerTrialAccount,
   setProfilePassword,
   updateProfile,
+  updateProperty,
+  updatePropertyGuide,
   updateSignupEmail,
 } from "@/lib/data/store";
 import { sendAdminSignupNotice, sendWelcomeEmail } from "@/lib/email/send";
@@ -39,10 +42,10 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { encodeSignupTicket, ticketFromProfile } from "@/lib/signup-ticket";
 import { isValidEmail } from "@/lib/utils";
-import { clearSession, getSession, requireSession, setSession } from "@/lib/session";
+import { clearSession, getSession, requireHostSession, setSession } from "@/lib/session";
 import type { CountryCode } from "libphonenumber-js";
-import type { AccountType, UnitBand } from "@/lib/types";
-import { ACCOUNT_TYPES } from "@/lib/types";
+import type { AccountType, LocalizedText, UnitBand } from "@/lib/types";
+import { ACCOUNT_TYPES, parsePropertyType } from "@/lib/types";
 
 async function clientKey() {
   const h = await headers();
@@ -226,48 +229,85 @@ export async function setPasswordAfterVerifyAction(_prev: { error?: string } | n
 }
 
 export async function finishOnboardingAction() {
-  const session = await requireSession();
+  const session = await requireHostSession();
   completeOnboarding(session.profileId);
   redirect("/app");
 }
 
 export async function bookOnboardingAction() {
-  const session = await requireSession();
+  const session = await requireHostSession();
   bookOnboarding(session.organizationId);
   revalidatePath("/", "layout");
 }
 
 export async function onboardingPropertyAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
+  const profile = getProfile(session.profileId);
+  const dict = await getDictionary(profile?.locale || "sv");
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
-  const tenantName = String(formData.get("tenantName") ?? "").trim();
-  if (!name || !address || !city || !tenantName) {
+  const tenantName =
+    String(formData.get("tenantName") ?? "").trim() || dict.propertyForm.tenantDefault;
+  const notes = String(formData.get("notes") ?? "").trim() || undefined;
+  const type = parsePropertyType(String(formData.get("type") ?? ""));
+  if (!name || !address || !city) {
     redirect("/onboarding?step=1");
   }
-  createProperty(session.organizationId, {
-    name,
-    address,
-    city,
-    country: "Sverige",
-    countryCode: "SE",
-    imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80",
-    type: "apartment",
-    sqm: 0,
-    rooms: 0,
-    tenantName,
-    tenantEmail: "",
-    tenantPhone: "",
-    leaseStart: new Date().toISOString(),
-    leaseEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    lastInspection: new Date().toISOString(),
-  });
+  const existing = listProperties(session.organizationId)[0];
+  if (existing) {
+    updateProperty(session.organizationId, existing.id, {
+      name,
+      address,
+      city,
+      type,
+      tenantName,
+      notes,
+    });
+  } else {
+    createProperty(session.organizationId, {
+      name,
+      address,
+      city,
+      country: "Sverige",
+      countryCode: "SE",
+      imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80",
+      type,
+      sqm: 0,
+      rooms: 0,
+      tenantName,
+      tenantEmail: "",
+      tenantPhone: "",
+      notes,
+      leaseStart: new Date().toISOString(),
+      leaseEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      lastInspection: new Date().toISOString(),
+    });
+  }
   redirect("/onboarding?step=2");
 }
 
+export async function onboardingGuideAction(formData: FormData) {
+  const session = await requireHostSession();
+  const profile = getProfile(session.profileId);
+  const locale = profile?.locale || "sv";
+  const property = listProperties(session.organizationId)[0];
+  if (!property) redirect("/onboarding?step=1");
+  const rules = String(formData.get("houseRules") ?? "").trim();
+  const houseRules: LocalizedText = {};
+  if (rules) houseRules[locale] = rules;
+  updatePropertyGuide(session.organizationId, property.id, {
+    wifiName: String(formData.get("wifiName") ?? "").trim(),
+    wifiPassword: String(formData.get("wifiPassword") ?? "").trim(),
+    checkIn: String(formData.get("checkIn") ?? "").trim() || "16:00",
+    checkOut: String(formData.get("checkOut") ?? "").trim() || "11:00",
+    houseRules,
+  });
+  redirect("/onboarding?step=3");
+}
+
 export async function onboardingContractorAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const name = String(formData.get("name") ?? "").trim();
   const contactName = String(formData.get("contactName") ?? "").trim();
   if (!name || !contactName) {
@@ -284,12 +324,12 @@ export async function onboardingContractorAction(formData: FormData) {
 }
 
 export async function exportDataAction() {
-  const session = await requireSession();
+  const session = await requireHostSession();
   return exportAccount(session.organizationId);
 }
 
 export async function deleteAccountAction() {
-  const session = await requireSession();
+  const session = await requireHostSession();
   deleteAccount(session.organizationId);
   await clearAccountSnapshot();
   await clearSession();

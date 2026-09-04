@@ -1,35 +1,34 @@
-import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { DangerZone } from "@/components/danger-zone";
 import { ExportDataButton } from "@/components/export-data-button";
+import { InvitePanel } from "@/components/invite-panel";
 import { PageHeader } from "@/components/page-header";
+import { SettingsBilling } from "@/components/settings-billing";
 import { SettingsLanguage } from "@/components/settings-language";
 import { Button } from "@/components/ui/button";
 import { FormField, NativeCheckbox } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import type { Dictionary } from "@/i18n/messages";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
-import { interpolate } from "@/i18n/interpolate";
 import { updateNotificationSettingsAction, updateSettingsAction } from "@/lib/actions";
 import { SUPPORT_EMAIL } from "@/lib/constants";
-import { getOrganization, getProfile, trialDaysLeft } from "@/lib/data/store";
-import { getSession } from "@/lib/session";
+import {
+  getOrganization,
+  getProfile,
+  isTrialEnded,
+  listInvitations,
+  listProperties,
+  trialDaysLeft,
+} from "@/lib/data/store";
+import { requireHostSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
-
-function planLabel(plan: string, dict: Dictionary) {
-  if (plan === "pro") return dict.settings.planPro;
-  if (plan === "trial") return dict.settings.planTrial;
-  return dict.settings.planNone;
-}
 
 export default async function SettingsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const session = await requireHostSession();
   const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
@@ -37,6 +36,9 @@ export default async function SettingsPage({
   const sp = await searchParams;
   const saved = (Array.isArray(sp.saved) ? sp.saved[0] : sp.saved) === "1";
   const days = trialDaysLeft(session.organizationId);
+  const ended = isTrialEnded(session.organizationId);
+  const properties = listProperties(session.organizationId);
+  const invitations = listInvitations(session.organizationId);
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -93,33 +95,27 @@ export default async function SettingsPage({
           </form>
         </section>
 
+        <SettingsBilling dict={dict} org={org} days={days} trialEnded={ended} saved={saved} />
+
         <section
-          id="billing"
+          id="users"
           className="scroll-mt-24 space-y-3 rounded-2xl border border-border bg-white p-5 shadow-soft"
         >
-          <h2 className="text-sm font-semibold text-navy-800">{dict.settings.billing}</h2>
-          <p className="text-sm text-muted-foreground">{dict.settings.billingHelp}</p>
-          <p className="text-sm text-navy-800">
-            {planLabel(org?.plan ?? "none", dict)}
-            {days !== null
-              ? ` · ${interpolate(dict.settings.trialLeft, { days: String(days) })}`
-              : ""}
-          </p>
-          <p className="text-sm text-muted-foreground">{dict.settings.choosePlanHelp}</p>
-          <Button asChild variant="cta">
-            <a href={`mailto:${SUPPORT_EMAIL}`}>{dict.settings.choosePlan}</a>
-          </Button>
-        </section>
-
-        <section className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-soft">
           <h2 className="text-sm font-semibold text-navy-800">{dict.settings.users}</h2>
           <p className="text-sm text-muted-foreground">{dict.settings.usersHelp}</p>
           <div className="rounded-xl border border-border px-3 py-3">
             <p className="text-sm font-medium text-navy-800">{profile?.fullName}</p>
             <p className="text-xs text-muted-foreground">
-              {profile?.email} · {dict.settings.roleAdmin}
+              {profile?.email} · {dict.access.roles[session.role]}
             </p>
           </div>
+          <h3 className="pt-2 text-sm font-semibold text-navy-800">{dict.settings.invite}</h3>
+          <p className="text-sm text-muted-foreground">{dict.settings.inviteHelp}</p>
+          <InvitePanel
+            dict={dict}
+            properties={properties.map((item) => ({ id: item.id, name: item.name }))}
+            invitations={invitations}
+          />
         </section>
 
         <section className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-soft">

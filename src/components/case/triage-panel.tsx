@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { FormField, NativeSelect } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/messages";
 import {
@@ -11,6 +12,7 @@ import {
   changePriorityAction,
   changeStatusAction,
   rotateWorkTokenAction,
+  saveCaseDetailsAction,
 } from "@/lib/actions";
 import { priorityLabel, statusLabel } from "@/lib/labels";
 import { CASE_PRIORITIES, CASE_STATUSES } from "@/lib/types";
@@ -22,6 +24,8 @@ export function TriagePanel({
   priority,
   contractorId,
   instructions,
+  dueAt,
+  costEstimate,
   contractors,
   dict,
 }: {
@@ -30,6 +34,8 @@ export function TriagePanel({
   priority: CasePriority;
   contractorId?: string;
   instructions?: string;
+  dueAt?: string;
+  costEstimate?: number;
   contractors: Pick<Contractor, "id" | "name" | "trade">[];
   dict: Dictionary;
 }) {
@@ -98,6 +104,40 @@ export function TriagePanel({
           </noscript>
         </form>
       </div>
+
+      <form
+        className="space-y-5 border-t border-border pt-4"
+        action={(data) => {
+          data.set("caseId", caseId);
+          start(async () => {
+            await saveCaseDetailsAction(data);
+          });
+        }}
+      >
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+          <FormField label={dict.caseDetail.due} htmlFor="case-due">
+            <Input
+              id="case-due"
+              name="dueAt"
+              type="datetime-local"
+              defaultValue={dueAt ? dueAt.slice(0, 16) : ""}
+            />
+          </FormField>
+          <FormField label={dict.caseDetail.cost} htmlFor="case-cost" hint={dict.caseDetail.costHelp}>
+            <Input
+              id="case-cost"
+              name="costEstimate"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={costEstimate?.toString() ?? ""}
+            />
+          </FormField>
+        </div>
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {dict.caseDetail.saveDetails}
+        </Button>
+      </form>
 
       <form
         className="space-y-5 border-t border-border pt-4"

@@ -2,14 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { PLACE_CATEGORIES } from "@/lib/types";
+import { PLACE_CATEGORIES, parsePropertyType } from "@/lib/types";
 import {
   assignPlaceToProperty,
   copyPropertyPlaces,
+  copyPropertyGuide,
+  canAddProperty,
   createPlace,
   createProperty,
-  getGuestGuide,
   getPlace,
+  getPropertyByToken,
+  getProfile,
   moveGuideCategory,
   movePropertyPlace,
   recordGuideEvent,
@@ -19,7 +22,8 @@ import {
   updatePropertyGuide,
   updatePropertyPlace,
 } from "@/lib/data/store";
-import { requireSession } from "@/lib/session";
+import { getDictionary } from "@/i18n/get-dictionary";
+import { requireHostSession } from "@/lib/session";
 import type { LocalizedText, MonetizationKind, PlaceCategory } from "@/lib/types";
 
 function revalidateGuide() {
@@ -27,14 +31,21 @@ function revalidateGuide() {
 }
 
 export async function createPropertyAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
+  const profile = getProfile(session.profileId);
+  const dict = await getDictionary(profile?.locale || "sv");
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
-  const tenantName = String(formData.get("tenantName") ?? "").trim();
-  if (!name || !address || !city || !tenantName) {
+  const tenantName =
+    String(formData.get("tenantName") ?? "").trim() || dict.propertyForm.tenantDefault;
+  if (!name || !address || !city) {
     redirect("/app/properties");
   }
+  if (!canAddProperty(session.organizationId)) {
+    redirect("/app/properties?limit=1");
+  }
+  const notes = String(formData.get("notes") ?? "").trim() || undefined;
   const property = createProperty(session.organizationId, {
     name,
     address,
@@ -42,12 +53,13 @@ export async function createPropertyAction(formData: FormData) {
     country: "Sverige",
     countryCode: "SE",
     imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80",
-    type: "apartment",
+    type: parsePropertyType(String(formData.get("type") ?? "")),
     sqm: 0,
     rooms: 0,
     tenantName,
     tenantEmail: "",
     tenantPhone: "",
+    notes,
     leaseStart: new Date().toISOString(),
     leaseEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lastInspection: new Date().toISOString(),
@@ -64,11 +76,11 @@ function loc(sv: string, en: string): LocalizedText {
 }
 
 export async function recordScanAction(token: string) {
-  const guest = getGuestGuide(token);
-  if (!guest) return;
+  const property = getPropertyByToken(token);
+  if (!property) return;
   recordGuideEvent({
-    organizationId: guest.property.organizationId,
-    propertyId: guest.property.id,
+    organizationId: property.organizationId,
+    propertyId: property.id,
     kind: "scan",
   });
 }
@@ -83,40 +95,47 @@ export async function recordGuideClickAction(formData: FormData) {
     | "click_book"
     | "click_website"
     | "click_discount"
-    | "click_phone";
-  const guest = getGuestGuide(token);
-  if (!guest) return;
+    | "click_phone"
+    | "click_wifi";
+  const property = getPropertyByToken(token);
+  if (!property) return;
   recordGuideEvent({
-    organizationId: guest.property.organizationId,
-    propertyId: guest.property.id,
+    organizationId: property.organizationId,
+    propertyId: property.id,
     placeId,
     kind,
   });
 }
 
 export async function rotatePropertyTokenAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   rotatePropertyToken(session.organizationId, String(formData.get("propertyId") ?? ""));
+  const { logSecurityEvent } = await import("@/lib/security/events");
+  logSecurityEvent("qr_rotated");
   revalidatePath("/", "layout");
 }
 
 export async function savePropertyBasicsAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const id = String(formData.get("propertyId") ?? "");
   const latRaw = String(formData.get("lat") ?? "").trim();
   const lngRaw = String(formData.get("lng") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
   updateProperty(session.organizationId, id, {
     name: String(formData.get("name") ?? "").trim(),
     address: String(formData.get("address") ?? "").trim(),
     city: String(formData.get("city") ?? "").trim(),
+    type: parsePropertyType(String(formData.get("type") ?? "")),
+    notes: notes || undefined,
     lat: latRaw ? Number(latRaw) : undefined,
     lng: lngRaw ? Number(lngRaw) : undefined,
   });
   revalidateGuide();
+  redirect(`/app/properties/${id}?tab=info&saved=1`);
 }
 
 export async function saveGuideAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const propertyId = String(formData.get("propertyId") ?? "");
   const numbers = String(formData.get("numbers") ?? "")
     .split("\n")
@@ -159,10 +178,11 @@ export async function saveGuideAction(formData: FormData) {
     appliances,
   });
   revalidateGuide();
+  redirect(`/app/properties/${propertyId}?tab=info&saved=1`);
 }
 
 export async function createPlaceAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const propertyId = String(formData.get("propertyId") ?? "");
   const category = String(formData.get("category") ?? "restaurants") as PlaceCategory;
   const latRaw = String(formData.get("lat") ?? "").trim();
@@ -198,7 +218,7 @@ export async function createPlaceAction(formData: FormData) {
 }
 
 export async function assignPlaceAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   assignPlaceToProperty(
     session.organizationId,
     String(formData.get("propertyId") ?? ""),
@@ -208,7 +228,7 @@ export async function assignPlaceAction(formData: FormData) {
 }
 
 export async function togglePlaceAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   updatePropertyPlace(session.organizationId, String(formData.get("propertyPlaceId") ?? ""), {
     enabled: String(formData.get("enabled") ?? "") === "true",
   });
@@ -216,7 +236,7 @@ export async function togglePlaceAction(formData: FormData) {
 }
 
 export async function movePlaceAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   movePropertyPlace(
     session.organizationId,
     String(formData.get("propertyPlaceId") ?? ""),
@@ -226,7 +246,7 @@ export async function movePlaceAction(formData: FormData) {
 }
 
 export async function copyPlacesAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   copyPropertyPlaces(
     session.organizationId,
     String(formData.get("fromPropertyId") ?? ""),
@@ -235,8 +255,20 @@ export async function copyPlacesAction(formData: FormData) {
   revalidateGuide();
 }
 
+export async function copyGuideAction(formData: FormData) {
+  const session = await requireHostSession();
+  const propertyId = String(formData.get("propertyId") ?? "");
+  copyPropertyGuide(
+    session.organizationId,
+    String(formData.get("fromPropertyId") ?? ""),
+    propertyId,
+  );
+  revalidateGuide();
+  redirect(`/app/properties/${propertyId}?tab=info&saved=1`);
+}
+
 export async function moveCategoryAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   moveGuideCategory(
     session.organizationId,
     String(formData.get("propertyId") ?? ""),
@@ -247,7 +279,7 @@ export async function moveCategoryAction(formData: FormData) {
 }
 
 export async function savePlaceAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const placeId = String(formData.get("placeId") ?? "");
   const existing = getPlace(session.organizationId, placeId);
   if (!existing) return;

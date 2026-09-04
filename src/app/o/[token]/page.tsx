@@ -82,6 +82,11 @@ export default async function OwnerViewPage({
                     </div>
                     <StatusBadge status={item.status} dict={dict} />
                   </div>
+                  {item.costEstimate != null ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {dict.owner.cost}: {item.costEstimate}
+                    </p>
+                  ) : null}
                   {item.photos.length ? (
                     <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {item.photos.map((photo) => (

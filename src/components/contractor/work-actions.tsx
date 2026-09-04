@@ -29,7 +29,15 @@ function useActionError(dict: Dictionary) {
   return { error, show };
 }
 
-export function RespondButtons({ token, dict }: { token: string; dict: Dictionary }) {
+export function RespondButtons({
+  token,
+  caseId,
+  dict,
+}: {
+  token?: string;
+  caseId?: string;
+  dict: Dictionary;
+}) {
   const [declining, setDeclining] = useState(false);
   const [pending, start] = useTransition();
 
@@ -38,7 +46,8 @@ export function RespondButtons({ token, dict }: { token: string; dict: Dictionar
       <form
         className="space-y-3"
         action={(data) => {
-          data.set("token", token);
+          data.set("token", token ?? "");
+          data.set("caseId", caseId ?? "");
           data.set("accept", "0");
           start(async () => {
             await contractorRespondAction(data);
@@ -65,7 +74,8 @@ export function RespondButtons({ token, dict }: { token: string; dict: Dictionar
       <form
         className="sm:flex-1"
         action={(data) => {
-          data.set("token", token);
+          data.set("token", token ?? "");
+          data.set("caseId", caseId ?? "");
           data.set("accept", "1");
           start(async () => {
             await contractorRespondAction(data);
@@ -90,10 +100,12 @@ export function RespondButtons({ token, dict }: { token: string; dict: Dictionar
 
 export function StatusButtons({
   token,
+  caseId,
   current,
   dict,
 }: {
-  token: string;
+  token?: string;
+  caseId?: string;
   current: CaseStatus;
   dict: Dictionary;
 }) {
@@ -110,7 +122,8 @@ export function StatusButtons({
         <form
           key={option.status}
           action={(data) => {
-            data.set("token", token);
+            data.set("token", token ?? "");
+            data.set("caseId", caseId ?? "");
             data.set("status", option.status);
             start(async () => {
               await contractorStatusAction(data);
@@ -134,11 +147,13 @@ export function StatusButtons({
 
 export function WorkPhotoUpload({
   token,
+  caseId,
   kind,
   label,
   dict,
 }: {
-  token: string;
+  token?: string;
+  caseId?: string;
   kind: "before" | "after";
   label: string;
   dict: Dictionary;
@@ -167,7 +182,8 @@ export function WorkPhotoUpload({
             files.map(async (file) => ({ url: await fileToDataUrl(file) })),
           );
           const data = new FormData();
-          data.set("token", token);
+          data.set("token", token ?? "");
+          data.set("caseId", caseId ?? "");
           data.set("kind", kind);
           data.set("photos", JSON.stringify(photos));
           const result = await contractorPhotosAction(data);
@@ -203,10 +219,12 @@ export function WorkPhotoUpload({
 
 export function WorkMessageForm({
   token,
+  caseId,
   locale,
   dict,
 }: {
-  token: string;
+  token?: string;
+  caseId?: string;
   locale: string;
   dict: Dictionary;
 }) {
@@ -215,7 +233,8 @@ export function WorkMessageForm({
     <form
       className="space-y-2"
       action={(data) => {
-        data.set("token", token);
+        data.set("token", token ?? "");
+        data.set("caseId", caseId ?? "");
         data.set("locale", locale);
         start(async () => {
           await contractorMessageAction(data);

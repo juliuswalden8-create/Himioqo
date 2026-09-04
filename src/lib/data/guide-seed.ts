@@ -813,4 +813,7 @@ export const guideEvents: GuideEvent[] = [
   event("ge_brisa_c7", "prop_brisa", "click_book", daysAgo(1, 8, 12), "place_brisa_golf"),
   event("ge_strand_s1", "prop_strand", "scan", daysAgo(20, 12, 0)),
   event("ge_strand_s2", "prop_strand", "scan", daysAgo(4, 7, 30)),
+  event("ge_sol_w1", "prop_solsidan", "click_wifi", daysAgo(3, 9, 18)),
+  event("ge_sol_w2", "prop_solsidan", "click_wifi", daysAgo(1, 19, 8)),
+  event("ge_brisa_w1", "prop_brisa", "click_wifi", daysAgo(2, 17, 25)),
 ];

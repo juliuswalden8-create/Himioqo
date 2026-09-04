@@ -8,12 +8,15 @@ export function ProgressSteps({
   current: number;
 }) {
   return (
-    <ol className="grid grid-cols-3 gap-2">
+    <ol
+      className="grid gap-2"
+      style={{ gridTemplateColumns: `repeat(${Math.max(steps.length, 1)}, minmax(0, 1fr))` }}
+    >
       {steps.map((label, index) => {
         const active = index === current;
         const done = index < current;
         return (
-          <li key={label} className="min-w-0">
+          <li key={`${index}-${label}`} className="min-w-0">
             <div
               className={cn(
                 "h-1 rounded-full",

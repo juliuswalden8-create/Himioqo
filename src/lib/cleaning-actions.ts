@@ -7,19 +7,22 @@ import {
   addCleaner,
   addCleaningPhotos,
   approveCleaningJob,
+  cleanerMayAccessJob,
   createCleaningJob,
+  getCleaningJob,
   getCleaningJobByToken,
   getOrganization,
   getOrganizationLocale,
   pushNotification,
   reportCleaningIssue,
   returnCleaningJob,
+  recordCleaningMinutes,
   toggleCleaningItem,
   updateCleaningStatus,
   upsertCleaningSchedule,
 } from "@/lib/data/store";
 import { sendCleaningCompleteNotice } from "@/lib/email/send";
-import { requireSession } from "@/lib/session";
+import { getSession, requireHostSession } from "@/lib/session";
 import {
   CLEANING_ISSUE_KINDS,
   type CleaningIssueKind,
@@ -31,8 +34,22 @@ function revalidateCleaning() {
   revalidatePath("/", "layout");
 }
 
+async function resolveCleanerJob(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const jobId = String(formData.get("jobId") ?? "");
+  if (token) {
+    const job = getCleaningJobByToken(token);
+    return job ? { job, token: job.accessToken } : null;
+  }
+  const session = await getSession();
+  if (!session || session.role !== "cleaner" || !jobId) return null;
+  const job = getCleaningJob(session.organizationId, jobId);
+  if (!job || !cleanerMayAccessJob(session.membership, job)) return null;
+  return { job, token: job.accessToken };
+}
+
 export async function createCleaningJobAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const propertyId = String(formData.get("propertyId") ?? "");
   const cleanerId = String(formData.get("cleanerId") ?? "") || undefined;
   const scheduledAt = String(formData.get("scheduledAt") ?? "");
@@ -58,7 +75,7 @@ export async function createCleaningJobAction(formData: FormData) {
 }
 
 export async function addCleanerAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const name = String(formData.get("name") ?? "").trim();
   const contactName = String(formData.get("contactName") ?? "").trim();
   if (!name || !contactName) redirect("/app/cleaning");
@@ -73,7 +90,7 @@ export async function addCleanerAction(formData: FormData) {
 }
 
 export async function saveScheduleAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!propertyId) redirect("/app/cleaning");
   upsertCleaningSchedule({
@@ -88,7 +105,7 @@ export async function saveScheduleAction(formData: FormData) {
 }
 
 export async function approveCleaningAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const job = approveCleaningJob(session.organizationId, String(formData.get("jobId") ?? ""));
   const dict = await getDictionary(getOrganizationLocale(job.organizationId));
   pushNotification({
@@ -102,7 +119,7 @@ export async function approveCleaningAction(formData: FormData) {
 }
 
 export async function returnCleaningAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   returnCleaningJob(
     session.organizationId,
     String(formData.get("jobId") ?? ""),
@@ -112,12 +129,12 @@ export async function returnCleaningAction(formData: FormData) {
 }
 
 export async function cleanerStatusAction(formData: FormData) {
-  const token = String(formData.get("token") ?? "");
+  const resolved = await resolveCleanerJob(formData);
+  if (!resolved) return { error: "notFound" as const };
   const status = String(formData.get("status") ?? "") as CleaningStatus;
-  if (!token || !["accepted", "in_progress", "completed"].includes(status)) return;
-  if (!getCleaningJobByToken(token)) return { error: "notFound" as const };
+  if (!["accepted", "in_progress", "completed"].includes(status)) return;
 
-  const job = updateCleaningStatus(token, status, true);
+  const job = updateCleaningStatus(resolved.token, status, true);
   const dict = await getDictionary(getOrganizationLocale(job.organizationId));
 
   if (status === "in_progress") {
@@ -149,42 +166,53 @@ export async function cleanerStatusAction(formData: FormData) {
 }
 
 export async function toggleCheckAction(formData: FormData) {
-  const token = String(formData.get("token") ?? "");
+  const resolved = await resolveCleanerJob(formData);
   const itemId = String(formData.get("itemId") ?? "");
   const done = String(formData.get("done") ?? "") === "true";
-  if (!token || !itemId) return;
-  toggleCleaningItem(token, itemId, done);
+  if (!resolved || !itemId) return;
+  toggleCleaningItem(resolved.token, itemId, done);
   revalidateCleaning();
 }
 
 export async function addCleaningPhotosAction(formData: FormData) {
-  const token = String(formData.get("token") ?? "");
+  const resolved = await resolveCleanerJob(formData);
+  if (!resolved) return { error: "notFound" as const };
   const kind = String(formData.get("kind") ?? "after") === "before" ? "before" : "after";
-  if (!token || !getCleaningJobByToken(token)) return { error: "notFound" as const };
 
   const parsed = parsePhotoPayload(formData.get("photos"));
   if (!parsed.ok) return { error: parsed.reason };
   if (!parsed.photos.length) return { error: "empty" as const };
 
   addCleaningPhotos(
-    token,
+    resolved.token,
     parsed.photos.map((photo) => ({ ...photo, kind })),
   );
   revalidateCleaning();
 }
 
+export async function recordCleaningMinutesAction(formData: FormData) {
+  const resolved = await resolveCleanerJob(formData);
+  if (!resolved) return { error: "notFound" as const };
+  const minutes = Number(formData.get("minutes") ?? "");
+  try {
+    recordCleaningMinutes(resolved.token, minutes);
+  } catch {
+    return { error: "generic" as const };
+  }
+  revalidateCleaning();
+}
+
 export async function reportCleaningIssueAction(formData: FormData) {
-  const token = String(formData.get("token") ?? "");
+  const resolved = await resolveCleanerJob(formData);
   const text = String(formData.get("text") ?? "").trim();
   const kind = String(formData.get("kind") ?? "repair") as CleaningIssueKind;
-  if (!token || !text) return { error: "empty" as const };
+  if (!resolved || !text) return { error: "empty" as const };
   if (!CLEANING_ISSUE_KINDS.includes(kind)) return { error: "kind" as const };
 
-  const job = getCleaningJobByToken(token);
-  if (!job) return { error: "notFound" as const };
+  const job = resolved.job;
 
   const updated = reportCleaningIssue({
-    token,
+    token: resolved.token,
     kind,
     text: text.slice(0, 2000),
     convert: String(formData.get("convert") ?? "") === "on",

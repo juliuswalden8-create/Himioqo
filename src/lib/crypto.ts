@@ -62,8 +62,7 @@ export function hashPassword(password: string) {
 }
 
 export function verifyPassword(password: string, stored?: string) {
-  if (!stored) return false;
-  if (!stored.includes(":")) return stored === password;
+  if (!stored || !stored.includes(":")) return false;
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
   const next = scryptSync(password, salt, 32);

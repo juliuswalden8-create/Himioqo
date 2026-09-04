@@ -6,7 +6,7 @@ import {
   rotateOwnerAccess,
   setOwnerAccessActive,
 } from "@/lib/data/store";
-import { requireSession } from "@/lib/session";
+import { requireHostSession } from "@/lib/session";
 import { isValidEmail } from "@/lib/utils";
 
 function revalidateAll() {
@@ -14,7 +14,7 @@ function revalidateAll() {
 }
 
 export async function createOwnerAccessAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   const ownerName = String(formData.get("ownerName") ?? "").trim();
   const ownerEmail = String(formData.get("ownerEmail") ?? "").trim();
   const propertyId = String(formData.get("propertyId") ?? "");
@@ -36,7 +36,7 @@ export async function createOwnerAccessAction(formData: FormData) {
 }
 
 export async function toggleOwnerAccessAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   setOwnerAccessActive(
     session.organizationId,
     String(formData.get("id") ?? ""),
@@ -46,7 +46,7 @@ export async function toggleOwnerAccessAction(formData: FormData) {
 }
 
 export async function rotateOwnerAccessAction(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireHostSession();
   rotateOwnerAccess(session.organizationId, String(formData.get("id") ?? ""));
   revalidateAll();
 }

@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { createPilotLead } from "@/lib/data/store";
+import { sendPilotLeadNotice } from "@/lib/email/send";
 import { type PilotResult, validatePilotLead } from "@/lib/pilot-schema";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -33,6 +34,12 @@ export async function submitPilotAction(formData: FormData): Promise<PilotResult
     createPilotLead(parsed.data);
   } catch {
     return { ok: false, error: "generic" };
+  }
+
+  try {
+    await sendPilotLeadNotice(parsed.data);
+  } catch {
+    // Lead is already stored. Missing inbox must not hide the thank-you state.
   }
   return { ok: true };
 }

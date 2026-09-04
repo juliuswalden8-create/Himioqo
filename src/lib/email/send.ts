@@ -1,4 +1,5 @@
-import { SUPPORT_EMAIL } from "@/lib/constants";
+import { FOUNDER_FIRST_NAME, founderInbox, QR_SIGN_PRICE_EUR, SUPPORT_EMAIL } from "@/lib/constants";
+import type { QrSignOrder } from "@/lib/types";
 import type { Dictionary } from "@/i18n/messages";
 import { interpolate } from "@/i18n/interpolate";
 import { appUrl } from "@/lib/utils";
@@ -137,10 +138,72 @@ export async function sendAdminSignupNotice(input: {
   }
   await client.emails.send({
     from: fromAddress(),
-    to: SUPPORT_EMAIL,
+    to: founderInbox(),
     subject: input.dict.email.adminSubject,
     text,
   });
+}
+
+export async function sendPilotLeadNotice(lead: {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  region: string;
+  propertyCount: string;
+  rentalType: string;
+  currentMethod: string;
+  mostValuable: string;
+  message?: string;
+  accountType?: "company" | "private";
+  wantsPilot: boolean;
+  locale: string;
+}) {
+  const to = founderInbox();
+  const subject = lead.wantsPilot
+    ? `Homioqo: ny pilotförfrågan från ${lead.name}`
+    : `Homioqo: ny demoförfrågan från ${lead.name}`;
+  const text = [
+    "Ny förfrågan från startsidans formulär.",
+    "",
+    `Namn: ${lead.name}`,
+    `Företag: ${lead.company || "—"}`,
+    `E-post: ${lead.email}`,
+    `Telefon: ${lead.phone || "—"}`,
+    `Roll: ${lead.accountType === "company" ? "Företag" : "Privatperson"}`,
+    `Antal bostäder: ${lead.propertyCount || "—"}`,
+    `Region: ${lead.region || "—"}`,
+    `Uthyrning: ${lead.rentalType || "—"}`,
+    `Pilot: ${lead.wantsPilot ? "ja" : "nej"}`,
+    `Språk: ${lead.locale}`,
+    lead.currentMethod ? `Nuvarande sätt: ${lead.currentMethod}` : "",
+    lead.mostValuable ? `Viktigast: ${lead.mostValuable}` : "",
+    "",
+    "Meddelande:",
+    lead.message || "—",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+
+  console.info("[homioqo] demo-lead", { to, subject, text });
+
+  const client = await resendClient();
+  if (!client) {
+    return { delivered: false as const };
+  }
+  try {
+    await client.emails.send({
+      from: fromAddress(),
+      to,
+      replyTo: lead.email,
+      subject,
+      text,
+    });
+    return { delivered: true as const };
+  } catch (error) {
+    console.error("[homioqo] demo-lead email failed", error);
+    return { delivered: false as const };
+  }
 }
 
 export async function sendCleaningCompleteNotice(input: {
@@ -160,6 +223,107 @@ export async function sendCleaningCompleteNotice(input: {
     subject: `${input.propertyName} är redo för nästa gäst`,
     text,
   });
+}
+
+export async function sendAccessEmail(input: {
+  to: string;
+  subject: string;
+  title: string;
+  body: string;
+  cta: string;
+  url: string;
+  ttl: string;
+  dict: Dictionary;
+}) {
+  const html = `<!DOCTYPE html>
+<html>
+  <body style="margin:0;background:#F7F4ED;font-family:Manrope,Arial,Helvetica,sans-serif;color:#1D292B;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F7F4ED;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #E4E7E2;">
+            <tr>
+              <td style="padding:32px 28px;">
+                <p style="margin:0 0 16px;font-size:20px;font-weight:700;color:#16383F;">${escapeHtml(input.title)}</p>
+                <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#5d6b7c;">${escapeHtml(input.body)}</p>
+                <p style="margin:0 0 24px;">
+                  <a href="${escapeHtml(input.url)}" style="display:inline-block;background:#B64A32;color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:12px;font-weight:650;font-size:15px;">${escapeHtml(input.cta)}</a>
+                </p>
+                <p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#5d6b7c;">${escapeHtml(input.ttl)}</p>
+                <p style="margin:0 0 8px;font-size:14px;line-height:1.55;color:#5d6b7c;">${escapeHtml(input.dict.email.fallback)}</p>
+                <p style="margin:0;font-size:13px;line-height:1.55;word-break:break-all;">
+                  <a href="${escapeHtml(input.url)}" style="color:#16383F;">${escapeHtml(input.url)}</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+  const text = [input.title, "", input.body, "", input.cta, input.url, "", input.ttl].join("\n");
+  const client = await resendClient();
+  if (!client) {
+    console.info("[homioqo] access email (logged)", { to: input.to, url: input.url });
+    return { delivered: false as const };
+  }
+  await client.emails.send({
+    from: fromAddress(),
+    to: input.to,
+    subject: input.subject,
+    html,
+    text,
+  });
+  return { delivered: true as const };
+}
+
+export async function sendQrSignOrderNotice(input: {
+  order: QrSignOrder;
+  propertyName: string;
+  organizationName: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+}) {
+  const to = founderInbox();
+  const { order } = input;
+  const subject = `Beställning: tryckt QR-skylt – ${input.propertyName}`;
+  const text = [
+    `${FOUNDER_FIRST_NAME}, det här är en betald beställning av en tryckt QR-skylt.`,
+    "Kunden har inte debiterats. Följ upp med faktura och leverans.",
+    "",
+    `Pris: ${QR_SIGN_PRICE_EUR} € inkl. moms (QR-skylt + uppstart, frakt i Sverige ingår)`,
+    `Bostad: ${input.propertyName}`,
+    `Property-id: ${order.propertyId}`,
+    `QR-token: ${order.qrToken}`,
+    `Organisation: ${input.organizationName}`,
+    `Kund: ${input.customerName}`,
+    `E-post: ${input.customerEmail}`,
+    `Telefon: ${input.customerPhone}`,
+    "",
+    "Leveransadress:",
+    order.shippingName,
+    order.shippingAddress,
+    `${order.shippingPostalCode} ${order.shippingCity}`,
+    order.shippingPhone,
+    order.shippingEmail,
+    "",
+    `Tid: ${order.createdAt}`,
+    `Order-id: ${order.id}`,
+  ].join("\n");
+  const client = await resendClient();
+  if (!client) {
+    console.info("[homioqo] QR sign order (logged)", { to, subject, text });
+    return { delivered: false as const };
+  }
+  await client.emails.send({
+    from: fromAddress(),
+    to,
+    subject,
+    text,
+  });
+  return { delivered: true as const };
 }
 
 function escapeHtml(value: string) {

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Wordmark } from "@/components/brand/logo";
 import { useAudience } from "@/components/landing/audience";
 import { LanguagePicker } from "@/components/language-picker";
+import { interpolate } from "@/i18n/interpolate";
 import type { Dictionary } from "@/i18n/messages";
-import { SUPPORT_EMAIL } from "@/lib/constants";
+import { FOUNDER_FIRST_NAME, SUPPORT_EMAIL } from "@/lib/constants";
 import { setLocaleAction } from "@/lib/locale-actions";
 
 export function MarketingFooter({ dict, locale }: { dict: Dictionary; locale: string }) {
@@ -21,6 +22,9 @@ export function MarketingFooter({ dict, locale }: { dict: Dictionary; locale: st
         <div>
           <Wordmark tone="onDark" />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-ivory/75">{m.blurb}</p>
+          <p className="mt-3 text-sm font-medium text-ivory">
+            {interpolate(dict.marketing.founder.footer, { name: FOUNDER_FIRST_NAME })}
+          </p>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
             className="mt-4 inline-block text-sm font-medium text-ivory hover:text-terracotta-soft"
@@ -58,6 +62,11 @@ export function MarketingFooter({ dict, locale }: { dict: Dictionary; locale: st
               <a href="#priser" className="hover:text-ivory">
                 {m.pricing}
               </a>
+            </li>
+            <li>
+              <Link href="/demo" className="hover:text-ivory">
+                {m.demo}
+              </Link>
             </li>
             <li>
               <a href="#faq" className="hover:text-ivory">

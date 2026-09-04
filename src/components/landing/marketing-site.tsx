@@ -6,6 +6,7 @@ import { DemoSection } from "@/components/landing/demo-form";
 import { DigitalGuestGuide } from "@/components/landing/digital-guest-guide";
 import { Faq } from "@/components/landing/faq";
 import { FinalCta } from "@/components/landing/final-cta";
+import { FounderNote } from "@/components/landing/founder-note";
 import { GetStarted } from "@/components/landing/get-started";
 import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
@@ -15,6 +16,7 @@ import { MarketingHeader } from "@/components/landing/marketing-header";
 import { Pricing } from "@/components/landing/pricing";
 import { PrivateBenefits } from "@/components/landing/private-benefits";
 import { QrSetup } from "@/components/landing/qr-setup";
+import { Team } from "@/components/landing/team";
 import { TrustPoints } from "@/components/landing/trust-points";
 import type { Dictionary } from "@/i18n/messages";
 import type { AccountType } from "@/lib/types";
@@ -51,6 +53,8 @@ function MarketingFrame({ dict, locale }: { dict: Dictionary; locale: string }) 
         <BusinessDashboard dict={dict} />
         <GetStarted dict={dict} />
         <TrustPoints dict={dict} />
+        <FounderNote dict={dict} />
+        <Team dict={dict} />
         <Pricing dict={dict} />
         <Faq dict={dict} />
         <FinalCta dict={dict} />

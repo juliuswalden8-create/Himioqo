@@ -1,4 +1,8 @@
+import { DEMO_PASSWORD } from "@/lib/constants";
+import { hashPassword } from "@/lib/crypto";
 import { daysAgo, daysFromNow, hoursAgo, todayAt } from "@/lib/utils";
+
+const DEMO_PASSWORD_HASH = hashPassword(DEMO_PASSWORD);
 import { DEFAULT_CHECK_KEYS } from "@/lib/cleaning";
 import type {
   ActivityLog,
@@ -12,6 +16,7 @@ import type {
   CleaningSchedule,
   Contractor,
   MaintenanceCase,
+  Membership,
   Organization,
   Profile,
   Property,
@@ -52,8 +57,164 @@ export const profile: Profile = {
   marketingConsent: false,
   emailVerifiedAt: daysAgo(400),
   onboardingCompletedAt: daysAgo(399),
-  passwordHash: "demo1234",
+  passwordHash: DEMO_PASSWORD_HASH,
 };
+
+export const MEMBERSHIP_ID = "mem_anna_host";
+export const CLEANER_PROFILE_ID = "profile_maria";
+export const CONTRACTOR_PROFILE_ID = "profile_omar";
+export const OWNER_PROFILE_ID = "profile_lina";
+export const OTHER_ORG_ID = "org_norrbo";
+export const OTHER_PROFILE_ID = "profile_erik";
+export const OTHER_PROPERTY_ID = "prop_norrbo";
+
+/** Dedicated logins for the full QR → assign → complete flow. Password is DEMO_PASSWORD. */
+export const cleanerProfile: Profile = {
+  id: CLEANER_PROFILE_ID,
+  createdAt: daysAgo(180),
+  updatedAt: daysAgo(1),
+  organizationId: ORG_ID,
+  firstName: "Maria",
+  lastName: "Lind",
+  fullName: "Maria Lind",
+  email: "maria@homioqo.se",
+  phone: "+46702211840",
+  phoneCountry: "SE",
+  country: "SE",
+  locale: "sv",
+  unitBand: "1-5",
+  marketingConsent: false,
+  emailVerifiedAt: daysAgo(170),
+  onboardingCompletedAt: daysAgo(170),
+  passwordHash: DEMO_PASSWORD_HASH,
+};
+
+export const contractorProfile: Profile = {
+  id: CONTRACTOR_PROFILE_ID,
+  createdAt: daysAgo(200),
+  updatedAt: daysAgo(1),
+  organizationId: ORG_ID,
+  firstName: "Omar",
+  lastName: "Nasser",
+  fullName: "Omar Nasser",
+  email: "omar@homioqo.se",
+  phone: "+46709904411",
+  phoneCountry: "SE",
+  country: "SE",
+  locale: "sv",
+  unitBand: "1-5",
+  marketingConsent: false,
+  emailVerifiedAt: daysAgo(190),
+  onboardingCompletedAt: daysAgo(190),
+  passwordHash: DEMO_PASSWORD_HASH,
+};
+
+export const ownerProfile: Profile = {
+  id: OWNER_PROFILE_ID,
+  createdAt: daysAgo(300),
+  updatedAt: daysAgo(2),
+  organizationId: ORG_ID,
+  firstName: "Lina",
+  lastName: "Holm",
+  fullName: "Lina Holm",
+  email: "lina@homioqo.se",
+  phone: "+46708891233",
+  phoneCountry: "SE",
+  country: "SE",
+  locale: "sv",
+  unitBand: "1-5",
+  marketingConsent: false,
+  emailVerifiedAt: daysAgo(290),
+  onboardingCompletedAt: daysAgo(290),
+  passwordHash: DEMO_PASSWORD_HASH,
+};
+
+export const otherOrganization: Organization = {
+  id: OTHER_ORG_ID,
+  createdAt: daysAgo(90),
+  updatedAt: daysAgo(2),
+  accountType: "company",
+  name: "Norrbo Förvaltning",
+  supportEmail: "erik@norrbo.se",
+  supportPhone: "070-111 22 33",
+  emergencyPhone: "112",
+  plan: "trial",
+  trialEndsAt: daysFromNow(20),
+  billed: false,
+  qrAllowance: 5,
+};
+
+export const otherHostProfile: Profile = {
+  id: OTHER_PROFILE_ID,
+  createdAt: daysAgo(90),
+  updatedAt: daysAgo(2),
+  organizationId: OTHER_ORG_ID,
+  firstName: "Erik",
+  lastName: "Norrbo",
+  fullName: "Erik Norrbo",
+  email: "erik@norrbo.se",
+  phone: "+46701112233",
+  phoneCountry: "SE",
+  country: "SE",
+  locale: "sv",
+  unitBand: "1-5",
+  marketingConsent: false,
+  emailVerifiedAt: daysAgo(80),
+  onboardingCompletedAt: daysAgo(80),
+  passwordHash: DEMO_PASSWORD_HASH,
+};
+
+export const profiles: Profile[] = [profile, cleanerProfile, contractorProfile, ownerProfile, otherHostProfile];
+
+export const memberships: Membership[] = [
+  {
+    id: MEMBERSHIP_ID,
+    createdAt: daysAgo(420),
+    updatedAt: daysAgo(1),
+    userId: PROFILE_ID,
+    organizationId: ORG_ID,
+    role: "host",
+    propertyIds: [],
+  },
+  {
+    id: "mem_maria_cleaner",
+    createdAt: daysAgo(180),
+    updatedAt: daysAgo(1),
+    userId: CLEANER_PROFILE_ID,
+    organizationId: ORG_ID,
+    role: "cleaner",
+    propertyIds: ["prop_solsidan", "prop_limhamn"],
+    directoryId: "cln_solsidan",
+  },
+  {
+    id: "mem_omar_contractor",
+    createdAt: daysAgo(200),
+    updatedAt: daysAgo(1),
+    userId: CONTRACTOR_PROFILE_ID,
+    organizationId: ORG_ID,
+    role: "contractor",
+    propertyIds: ["prop_solsidan"],
+    directoryId: "con_las",
+  },
+  {
+    id: "mem_lina_owner",
+    createdAt: daysAgo(300),
+    updatedAt: daysAgo(2),
+    userId: OWNER_PROFILE_ID,
+    organizationId: ORG_ID,
+    role: "owner",
+    propertyIds: ["prop_solsidan"],
+  },
+  {
+    id: "mem_erik_host",
+    createdAt: daysAgo(90),
+    updatedAt: daysAgo(2),
+    userId: OTHER_PROFILE_ID,
+    organizationId: OTHER_ORG_ID,
+    role: "host",
+    propertyIds: [],
+  },
+];
 
 export const properties: Property[] = [
   {
@@ -247,6 +408,32 @@ export const properties: Property[] = [
         caption: "Terrass mot havet",
       },
     ],
+  },
+  {
+    id: OTHER_PROPERTY_ID,
+    createdAt: daysAgo(40),
+    updatedAt: daysAgo(2),
+    organizationId: OTHER_ORG_ID,
+    name: "Fjällstugan Norrbo",
+    address: "Fjällvägen 4",
+    city: "Åre",
+    country: "Sverige",
+    countryCode: "SE",
+    imageUrl:
+      "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1600&q=80",
+    type: "house",
+    sqm: 86,
+    rooms: 3,
+    tenantName: "Gäst",
+    tenantEmail: "",
+    tenantPhone: "",
+    leaseStart: daysAgo(20),
+    leaseEnd: daysFromNow(40),
+    lastInspection: daysAgo(10),
+    reportToken: "qr_norrbo",
+    notes: "Intern nyckelkod 9912. Visa aldrig för gäster.",
+    documents: [],
+    inspectionPhotos: [],
   },
 ];
 

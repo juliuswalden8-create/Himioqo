@@ -1,3 +1,11 @@
+/**
+ * In-memory application store.
+ *
+ * Data is seeded on first access and dies on process restart (cold start,
+ * deploy, idle serverless). `supabase/schema.sql` exists but is not wired —
+ * do not treat this as durable persistence. Demo login and trial signups
+ * live here until a dedicated database pass.
+ */
 import { format, parseISO, startOfMonth, subMonths } from "date-fns";
 import { sv } from "date-fns/locale";
 import {
@@ -10,9 +18,11 @@ import {
   cleaningPhotos as seedCleaningPhotos,
   cleaningSchedules as seedCleaningSchedules,
   contractors as seedContractors,
+  memberships as seedMemberships,
   messages as seedMessages,
   organization as seedOrganization,
-  profile as seedProfile,
+  otherOrganization as seedOtherOrganization,
+  profiles as seedProfiles,
   properties as seedProperties,
 } from "@/lib/data/seed";
 import {
@@ -22,13 +32,36 @@ import {
   propertyPlaces as seedPropertyPlaces,
 } from "@/lib/data/guide-seed";
 import { DEFAULT_CATEGORY_ORDER } from "@/lib/places";
-import { INCLUDED_QR_CODES, TRIAL_DAYS } from "@/lib/constants";
+import {
+  canInviteRole,
+  canAccessProperty,
+  canOrderQrSign,
+  membershipIsActive,
+} from "@/lib/access/permissions";
+import {
+  decodeAccessTicket,
+  encodeAccessTicket,
+  isAccessTicketExpired,
+} from "@/lib/access/tickets";
+import {
+  INCLUDED_QR_CODES,
+  INVITE_TTL_HOURS,
+  LOGIN_LINK_TTL_MINUTES,
+  QR_SIGN_PRICE_EUR,
+  TRIAL_DAYS,
+  TRIAL_PROPERTY_LIMIT,
+} from "@/lib/constants";
 import { hashPassword, hashToken, verifyPassword } from "@/lib/crypto";
 import {
   decodeSignupTicket,
   isSignupTicketExpired,
   type SignupTicket,
 } from "@/lib/signup-ticket";
+import {
+  CASE_STATUSES,
+  CLOSED_STATUSES,
+  OPEN_STATUSES,
+} from "@/lib/types";
 import type {
   AccountType,
   ActivityLog,
@@ -62,8 +95,11 @@ import type {
   GuideEvent,
   GuideEventKind,
   InboxThread,
+  Invitation,
   LocalizedText,
+  LoginLink,
   MaintenanceCase,
+  Membership,
   MonthDatum,
   Organization,
   Profile,
@@ -79,11 +115,13 @@ import type {
   PropertyPlace,
   PropertyPlaceWithPlace,
   PropertyWithMeta,
+  QrSignOrder,
   RecurringIssue,
+  StaffRole,
   UnitBand,
+  UsageMetrics,
   VerificationToken,
 } from "@/lib/types";
-import { CLOSED_STATUSES, OPEN_STATUSES, CASE_STATUSES } from "@/lib/types";
 import { DEFAULT_CHECK_KEYS, DEFAULT_CHECK_LABELS } from "@/lib/cleaning";
 import { createId, createToken, daysFromNow, nowIso } from "@/lib/utils";
 
@@ -114,26 +152,30 @@ interface StoreShape {
   notifications: Notification[];
   ownerAccess: OwnerAccess[];
   pilotLeads: PilotLead[];
+  memberships: Membership[];
+  invitations: Invitation[];
+  loginLinks: LoginLink[];
+  qrSignOrders: QrSignOrder[];
 }
 
-const globalForStore = globalThis as unknown as { __hqStore7?: StoreShape };
+const globalForStore = globalThis as unknown as { __hqStore10?: StoreShape };
 
 function getStore(): StoreShape {
-  if (!globalForStore.__hqStore7) {
-    globalForStore.__hqStore7 = createInitial();
+  if (!globalForStore.__hqStore10) {
+    globalForStore.__hqStore10 = createInitial();
   }
-  return globalForStore.__hqStore7;
+  return globalForStore.__hqStore10;
 }
 
 /** Test-only. Restores the seeded state so each test starts from a clean slate. */
 export function resetStore() {
-  globalForStore.__hqStore7 = createInitial();
+  globalForStore.__hqStore10 = createInitial();
 }
 
 function createInitial(): StoreShape {
   return {
-    organizations: [structuredClone(seedOrganization)],
-    profiles: [structuredClone(seedProfile)],
+    organizations: [structuredClone(seedOrganization), structuredClone(seedOtherOrganization)],
+    profiles: structuredClone(seedProfiles),
     properties: structuredClone(seedProperties),
     contractors: structuredClone(seedContractors),
     cases: structuredClone(seedCases),
@@ -158,6 +200,10 @@ function createInitial(): StoreShape {
     notifications: [],
     ownerAccess: [],
     pilotLeads: [],
+    memberships: structuredClone(seedMemberships),
+    invitations: [],
+    loginLinks: [],
+    qrSignOrders: [],
   };
 }
 
@@ -318,6 +364,7 @@ export function registerTrialAccount(input: {
     marketingConsent: input.marketingConsent,
   };
   store.profiles.push(profile);
+  ensureHostMembership(profile.id, organizationId);
   store.notices.push({
     id: createId(),
     createdAt: now,
@@ -394,6 +441,7 @@ export function upsertTrialAccountFromTicket(ticket: SignupTicket) {
     marketingConsent: ticket.mk,
   };
   store.profiles.push(profile);
+  ensureHostMembership(profile.id, ticket.oid);
   return profile;
 }
 
@@ -409,12 +457,15 @@ export function upsertAccountSnapshot(input: { profile: Profile; organization: O
   const existingProfile = getProfile(input.profile.id);
   if (existingProfile) {
     Object.assign(existingProfile, input.profile, { updatedAt: now });
+    ensureHostMembership(existingProfile.id, existingProfile.organizationId);
     return existingProfile;
   }
   const byEmail = getProfileByEmail(input.profile.email);
   if (byEmail && byEmail.id !== input.profile.id) return byEmail;
   store.profiles.push({ ...input.profile, updatedAt: now });
-  return getProfile(input.profile.id)!;
+  const saved = getProfile(input.profile.id)!;
+  ensureHostMembership(saved.id, saved.organizationId);
+  return saved;
 }
 
 export function consumeVerificationToken(rawToken: string) {
@@ -451,11 +502,61 @@ export function consumeVerificationToken(rawToken: string) {
   return profile;
 }
 
+export function bumpSessionVersion(profileId: string) {
+  const profile = getProfile(profileId);
+  if (!profile) return;
+  profile.sessionVersion = (profile.sessionVersion ?? 0) + 1;
+  profile.updatedAt = nowIso();
+}
+
 export function setProfilePassword(profileId: string, password: string) {
   const profile = getProfile(profileId);
   if (!profile) throw new Error("missing");
   profile.passwordHash = hashPassword(password);
+  profile.sessionVersion = (profile.sessionVersion ?? 0) + 1;
   profile.updatedAt = nowIso();
+  return profile;
+}
+
+export function createPasswordResetToken(profileId: string, rawToken: string) {
+  const store = getStore();
+  const now = nowIso();
+  for (const token of store.verificationTokens) {
+    if (token.profileId === profileId && token.purpose === "reset" && !token.usedAt) {
+      token.usedAt = now;
+    }
+  }
+  store.verificationTokens.push({
+    id: createId(),
+    createdAt: now,
+    updatedAt: now,
+    profileId,
+    tokenHash: hashToken(rawToken),
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    purpose: "reset",
+  });
+}
+
+export function peekPasswordResetToken(rawToken: string) {
+  const store = getStore();
+  const hashed = hashToken(rawToken);
+  const token = store.verificationTokens.find(
+    (item) => item.tokenHash === hashed && item.purpose === "reset",
+  );
+  if (!token || token.usedAt) return null;
+  if (new Date(token.expiresAt).getTime() < Date.now()) return null;
+  return getProfile(token.profileId) ?? null;
+}
+
+export function consumePasswordResetToken(rawToken: string) {
+  const profile = peekPasswordResetToken(rawToken);
+  if (!profile) return null;
+  const hashed = hashToken(rawToken);
+  const token = getStore().verificationTokens.find((item) => item.tokenHash === hashed);
+  if (token) {
+    token.usedAt = nowIso();
+    token.updatedAt = token.usedAt;
+  }
   return profile;
 }
 
@@ -519,6 +620,8 @@ export function exportAccount(organizationId: string) {
       return property?.organizationId === organizationId;
     }),
     guideEvents: store.guideEvents.filter((e) => e.organizationId === organizationId),
+    memberships: store.memberships.filter((m) => m.organizationId === organizationId),
+    invitations: store.invitations.filter((i) => i.organizationId === organizationId),
   };
 }
 
@@ -529,6 +632,9 @@ export function deleteAccount(organizationId: string) {
   );
   const propertyIds = new Set(
     store.properties.filter((p) => p.organizationId === organizationId).map((p) => p.id),
+  );
+  const userIds = new Set(
+    store.profiles.filter((p) => p.organizationId === organizationId).map((p) => p.id),
   );
   store.organizations = store.organizations.filter((o) => o.id !== organizationId);
   store.profiles = store.profiles.filter((p) => p.organizationId !== organizationId);
@@ -553,13 +659,52 @@ export function deleteAccount(organizationId: string) {
   store.places = store.places.filter((p) => p.organizationId !== organizationId);
   store.propertyPlaces = store.propertyPlaces.filter((pp) => !propertyIds.has(pp.propertyId));
   store.guideEvents = store.guideEvents.filter((e) => e.organizationId !== organizationId);
+  store.memberships = store.memberships.filter((m) => m.organizationId !== organizationId);
+  store.invitations = store.invitations.filter((i) => i.organizationId !== organizationId);
+  store.loginLinks = store.loginLinks.filter((l) => !userIds.has(l.userId));
+}
+
+export function isPropertyCapLifted(org: Organization | undefined | null) {
+  if (!org) return false;
+  return org.billed || org.pilotComplete === true || org.plan === "pro";
+}
+
+export function propertyLimitFor(org: Organization | undefined | null): number | null {
+  return isPropertyCapLifted(org) ? null : TRIAL_PROPERTY_LIMIT;
+}
+
+export function canAddProperty(organizationId: string) {
+  const org = getOrganization(organizationId);
+  const limit = propertyLimitFor(org);
+  if (limit === null) return true;
+  return listProperties(organizationId).length < limit;
+}
+
+export function isTrialActive(org: Organization | undefined | null) {
+  if (!org || org.billed || org.pilotComplete || org.plan === "pro") return false;
+  return org.plan === "trial";
 }
 
 export function trialDaysLeft(organizationId: string) {
   const org = getOrganization(organizationId);
-  if (!org?.trialEndsAt) return null;
+  if (!isTrialActive(org) || !org?.trialEndsAt) return null;
   const ms = new Date(org.trialEndsAt).getTime() - Date.now();
   return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+}
+
+export function isTrialEnded(organizationId: string) {
+  const org = getOrganization(organizationId);
+  if (!isTrialActive(org) || !org?.trialEndsAt) return false;
+  return new Date(org.trialEndsAt).getTime() <= Date.now();
+}
+
+export function savePayPerHomeMonth(organizationId: string, value: string) {
+  const org = getOrganization(organizationId);
+  if (!org) throw new Error("Organisationen hittades inte");
+  const trimmed = value.trim().slice(0, 32);
+  org.payPerHomeMonth = trimmed || undefined;
+  org.updatedAt = nowIso();
+  return org;
 }
 
 export function registerAccount(input: {
@@ -627,7 +772,9 @@ export function getProperty(organizationId: string, id: string) {
 
 export function getPropertyByToken(token: string) {
   const property = getStore().properties.find((p) => p.reportToken === token);
-  return property ? withMeta(property) : undefined;
+  if (!property) return undefined;
+  if (!guestLinkIsOpen(property)) return undefined;
+  return withMeta(property);
 }
 
 export function propertyFilterOptions(organizationId: string) {
@@ -651,6 +798,9 @@ export function createProperty(
     | "inspectionPhotos"
   > & { documents?: Property["documents"]; inspectionPhotos?: Property["inspectionPhotos"] },
 ) {
+  if (!canAddProperty(organizationId)) {
+    throw new Error("property_limit");
+  }
   const store = getStore();
   const now = nowIso();
   const property: Property = {
@@ -711,8 +861,77 @@ export function rotatePropertyToken(organizationId: string, propertyId: string) 
   );
   if (!property) throw new Error("Bostaden hittades inte");
   property.reportToken = createToken("qr");
+  property.guestLinkRevokedAt = undefined;
   property.updatedAt = nowIso();
   return property.reportToken;
+}
+
+/**
+ * Guest-safe fields for the public print sign. Never include notes, tenant
+ * contact, owner access or case internals.
+ */
+export function getPublicQrSign(token: string) {
+  const property = getPropertyByToken(token);
+  if (!property) return undefined;
+  return {
+    name: property.name,
+    address: property.address,
+    city: property.city,
+    reportToken: property.reportToken,
+  };
+}
+
+export function listQrSignOrders(organizationId: string, propertyId?: string) {
+  return getStore()
+    .qrSignOrders.filter(
+      (order) =>
+        order.organizationId === organizationId &&
+        (!propertyId || order.propertyId === propertyId),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getOpenQrSignOrder(organizationId: string, propertyId: string) {
+  return listQrSignOrders(organizationId, propertyId).find((order) => order.status === "open");
+}
+
+export function placeQrSignOrder(input: {
+  membership: Membership | null | undefined;
+  propertyId: string;
+  shippingName: string;
+  shippingAddress: string;
+  shippingPostalCode: string;
+  shippingCity: string;
+  shippingPhone: string;
+  shippingEmail: string;
+  orderedByProfileId: string;
+}): QrSignOrder {
+  if (!canOrderQrSign(input.membership, input.propertyId)) {
+    throw new Error("forbidden");
+  }
+  const property = getProperty(input.membership.organizationId, input.propertyId);
+  if (!property) throw new Error("forbidden");
+  const store = getStore();
+  const now = nowIso();
+  const order: QrSignOrder = {
+    id: createId(),
+    createdAt: now,
+    updatedAt: now,
+    organizationId: input.membership.organizationId,
+    propertyId: property.id,
+    qrToken: property.reportToken,
+    status: "open",
+    priceEur: QR_SIGN_PRICE_EUR,
+    shippingName: input.shippingName,
+    shippingAddress: input.shippingAddress,
+    shippingPostalCode: input.shippingPostalCode,
+    shippingCity: input.shippingCity,
+    shippingPhone: input.shippingPhone,
+    shippingEmail: input.shippingEmail,
+    orderedByProfileId: input.orderedByProfileId,
+  };
+  store.qrSignOrders.push(order);
+  return order;
 }
 
 export function listContractors(organizationId: string) {
@@ -831,6 +1050,42 @@ export function getDashboardStats(organizationId: string): DashboardStats {
         (c) => c.createdAt,
       ),
     },
+  };
+}
+
+export function getUsageMetrics(organizationId: string): UsageMetrics {
+  const store = getStore();
+  const properties = listProperties(organizationId);
+  const cases = listCases(organizationId);
+  const org = getOrganization(organizationId);
+  const closed = cases.filter(
+    (item) => CLOSED_STATUSES.includes(item.status) && item.completedAt,
+  );
+  const hours = closed.map(
+    (item) => (Date.parse(item.completedAt!) - Date.parse(item.createdAt)) / 3_600_000,
+  );
+  const avg = hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null;
+  const events = store.guideEvents.filter((item) => item.organizationId === organizationId);
+  const cleanings = store.cleaningJobs.filter(
+    (job) =>
+      job.organizationId === organizationId &&
+      (job.status === "completed" || job.status === "approved"),
+  );
+  const wifiCopies = events.filter((item) => item.kind === "click_wifi").length;
+  const scans = events.filter((item) => item.kind === "scan").length;
+  return {
+    scans,
+    reports: cases.length,
+    avgResolutionHours: avg === null ? null : Math.round(avg * 10) / 10,
+    cleaningsCompleted: cleanings.length,
+    handledCases: closed.length,
+    wifiCopies,
+    guideViews: scans,
+    propertiesCreated: properties.length,
+    propertiesWithWifi: properties.filter((property) => Boolean(getPropertyGuide(property.id)?.wifiName))
+      .length,
+    trial: isTrialActive(org),
+    billed: Boolean(org?.billed),
   };
 }
 
@@ -1229,7 +1484,19 @@ export function tenantConfirm(trackToken: string, actorName: string) {
 
 export function updateOrganization(
   organizationId: string,
-  patch: Partial<Pick<Organization, "name" | "supportEmail" | "supportPhone" | "emergencyPhone">>,
+  patch: Partial<
+    Pick<
+      Organization,
+      | "name"
+      | "supportEmail"
+      | "supportPhone"
+      | "emergencyPhone"
+      | "payPerHomeMonth"
+      | "pilotComplete"
+      | "billed"
+      | "plan"
+    >
+  >,
 ) {
   const org = getOrganization(organizationId);
   if (!org) throw new Error("Organisationen hittades inte");
@@ -1464,12 +1731,21 @@ export function updateCleaningStatus(tokenOrId: string, status: CleaningStatus, 
   job.status = status;
   job.updatedAt = now;
   const property = store.properties.find((p) => p.id === job.propertyId);
-  if (status === "in_progress" && property) {
-    property.guestReady = false;
-    property.updatedAt = now;
+  if (status === "in_progress") {
+    job.startedAt = job.startedAt ?? now;
+    if (property) {
+      property.guestReady = false;
+      property.updatedAt = now;
+    }
   }
   if (status === "completed") {
     job.completedAt = now;
+    if (job.startedAt && job.minutesWorked == null) {
+      job.minutesWorked = Math.max(
+        1,
+        Math.round((Date.parse(now) - Date.parse(job.startedAt)) / 60_000),
+      );
+    }
     if (property) {
       property.guestReady = true;
       property.updatedAt = now;
@@ -1484,6 +1760,18 @@ export function updateCleaningStatus(tokenOrId: string, status: CleaningStatus, 
       read: false,
     });
   }
+  return hydrateCleaningJob(job);
+}
+
+export function recordCleaningMinutes(token: string, minutes: number) {
+  const job = getStore().cleaningJobs.find((item) => item.accessToken === token);
+  if (!job) throw new Error("Uppdraget hittades inte");
+  const value = Math.round(minutes);
+  if (!Number.isFinite(value) || value < 0 || value > 24 * 60) {
+    throw new Error("time");
+  }
+  job.minutesWorked = value;
+  job.updatedAt = nowIso();
   return hydrateCleaningJob(job);
 }
 
@@ -1628,7 +1916,10 @@ function defaultGuideFor(property: Property): PropertyGuide {
     wifiPassword: "",
     checkIn: "16:00",
     checkOut: "11:00",
-    houseRules: {},
+    houseRules: {
+      sv: "Visa hänsyn till grannar. Rökning endast utomhus. Lämna bostaden i samma skick som vid ankomst.",
+      en: "Please be considerate of neighbours. Smoking outdoors only. Leave the home as you found it.",
+    },
     parking: {},
     waste: {},
     appliances: [],
@@ -1846,6 +2137,41 @@ export function movePropertyPlace(organizationId: string, propertyPlaceId: strin
   swap.updatedAt = nowIso();
 }
 
+export function copyPropertyGuide(
+  organizationId: string,
+  fromPropertyId: string,
+  toPropertyId: string,
+) {
+  const fromProperty = getProperty(organizationId, fromPropertyId);
+  const toProperty = getProperty(organizationId, toPropertyId);
+  if (!fromProperty || !toProperty) throw new Error("Bostaden hittades inte");
+  const source = getPropertyGuide(fromPropertyId);
+  if (!source) throw new Error("Bostaden hittades inte");
+  updatePropertyGuide(organizationId, toPropertyId, {
+    wifiName: source.wifiName,
+    wifiPassword: source.wifiPassword,
+    checkIn: source.checkIn,
+    checkOut: source.checkOut,
+    houseRules: { ...source.houseRules },
+    parking: { ...source.parking },
+    waste: { ...source.waste },
+    emergency: { ...source.emergency },
+    appliances: source.appliances.map((item) => ({
+      ...item,
+      id: createId(),
+      title: { ...item.title },
+      text: { ...item.text },
+    })),
+    importantNumbers: source.importantNumbers.map((item) => ({
+      ...item,
+      id: createId(),
+      label: { ...item.label },
+    })),
+    categoryOrder: [...source.categoryOrder],
+  });
+  copyPropertyPlaces(organizationId, fromPropertyId, toPropertyId);
+}
+
 export function copyPropertyPlaces(organizationId: string, fromPropertyId: string, toPropertyId: string) {
   const store = getStore();
   const from = store.properties.find(
@@ -2052,6 +2378,30 @@ export function updateCasePriority(
   item.priority = priority;
   item.updatedAt = nowIso();
   logActivity(caseId, "status_changed", actorName, `Prioritet: ${label ?? priority}`);
+  return hydrateCase(item);
+}
+
+export function updateCaseDetails(
+  organizationId: string,
+  caseId: string,
+  patch: { dueAt?: string | null; costEstimate?: number | null },
+  actorName: string,
+) {
+  const item = getStore().cases.find(
+    (entry) => entry.id === caseId && entry.organizationId === organizationId,
+  );
+  if (!item) throw new Error("Ärendet hittades inte");
+  if (patch.dueAt !== undefined) {
+    item.dueAt = patch.dueAt || undefined;
+  }
+  if (patch.costEstimate !== undefined) {
+    item.costEstimate =
+      patch.costEstimate == null || Number.isNaN(patch.costEstimate)
+        ? undefined
+        : Math.round(patch.costEstimate);
+  }
+  item.updatedAt = nowIso();
+  logActivity(caseId, "status_changed", actorName, "Deadline och kostnadsförslag uppdaterades");
   return hydrateCase(item);
 }
 
@@ -2359,6 +2709,8 @@ export function getOwnerView(token: string) {
       createdAt: item.createdAt,
       completedAt: item.completedAt,
       approvedAt: item.approvedAt,
+      dueAt: item.dueAt,
+      costEstimate: item.costEstimate,
       // Only work the manager has signed off on carries photos for the owner.
       photos:
         item.status === "approved"
@@ -2421,5 +2773,520 @@ export function getGuestGuide(token: string) {
   const org = getOrganization(property.organizationId);
   const guide = ensurePropertyGuide(property);
   const places = listAssignedPlaces(property.id, true);
-  return { property, org, guide, places };
+  return {
+    property: {
+      name: property.name,
+      address: property.address,
+      city: property.city,
+      country: property.country,
+      lat: property.lat,
+      lng: property.lng,
+    },
+    org: org
+      ? {
+          name: org.name,
+          supportEmail: org.supportEmail,
+          supportPhone: org.supportPhone,
+          emergencyPhone: org.emergencyPhone,
+        }
+      : undefined,
+    guide: {
+      welcome: guide.welcome,
+      wifiName: guide.wifiName,
+      wifiPassword: guide.wifiPassword,
+      checkIn: guide.checkIn,
+      checkOut: guide.checkOut,
+      houseRules: guide.houseRules,
+      parking: guide.parking,
+      waste: guide.waste,
+      appliances: guide.appliances,
+      importantNumbers: guide.importantNumbers,
+      emergency: guide.emergency,
+      categoryOrder: guide.categoryOrder,
+    },
+    places,
+  };
+}
+
+export function guestLinkIsOpen(property: Property) {
+  if (property.guestLinkRevokedAt) return false;
+  if (property.guestLinkExpiresAt && Date.parse(property.guestLinkExpiresAt) < Date.now()) {
+    return false;
+  }
+  return true;
+}
+
+function ensureHostMembership(userId: string, organizationId: string) {
+  const existing = getStore().memberships.find(
+    (item) =>
+      item.userId === userId &&
+      item.organizationId === organizationId &&
+      item.role === "host" &&
+      !item.revokedAt,
+  );
+  if (existing) return existing;
+  return createMembership({
+    userId,
+    organizationId,
+    role: "host",
+    propertyIds: [],
+  });
+}
+
+export function createMembership(input: {
+  userId: string;
+  organizationId: string;
+  role: StaffRole;
+  propertyIds: string[];
+  directoryId?: string;
+}) {
+  const store = getStore();
+  const now = nowIso();
+  const membership: Membership = {
+    id: createId(),
+    createdAt: now,
+    updatedAt: now,
+    userId: input.userId,
+    organizationId: input.organizationId,
+    role: input.role,
+    propertyIds: input.role === "host" ? [] : [...input.propertyIds],
+    directoryId: input.directoryId,
+  };
+  store.memberships.push(membership);
+  return membership;
+}
+
+export function getMembership(id: string) {
+  return getStore().memberships.find((item) => item.id === id);
+}
+
+export function listMembershipsForUser(userId: string, includeRevoked = false) {
+  return getStore()
+    .memberships.filter((item) => item.userId === userId && (includeRevoked || !item.revokedAt))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export function getActiveMembership(
+  userId: string,
+  organizationId?: string,
+  role?: StaffRole,
+) {
+  const items = listMembershipsForUser(userId).filter(
+    (item) => !organizationId || item.organizationId === organizationId,
+  );
+  if (role) return items.find((item) => item.role === role) ?? null;
+  return items.find((item) => item.role === "host") ?? items[0] ?? null;
+}
+
+function propertyInScope(membership: Membership, propertyId: string) {
+  return canAccessProperty(membership, propertyId, membership.organizationId);
+}
+
+export function listPropertiesForMembership(
+  membership: Membership,
+  filters: PropertyFilters = {},
+) {
+  return listProperties(membership.organizationId, filters).filter((property) =>
+    propertyInScope(membership, property.id),
+  );
+}
+
+export function listCasesForMembership(membership: Membership, filters: CaseFilters = {}) {
+  let items = listCases(membership.organizationId, filters).filter((item) =>
+    propertyInScope(membership, item.propertyId),
+  );
+  if (membership.role === "contractor") {
+    items = items.filter((item) => item.contractorId === membership.directoryId);
+    for (const item of items) {
+      if (!item.workToken) {
+        const raw = getStore().cases.find((row) => row.id === item.id);
+        if (raw && !raw.workToken) {
+          raw.workToken = createToken("wk");
+          item.workToken = raw.workToken;
+        }
+      }
+    }
+  }
+  if (membership.role === "cleaner") {
+    items = [];
+  }
+  return items;
+}
+
+export function listCleaningJobsForMembership(membership: Membership) {
+  let jobs = listCleaningJobs(membership.organizationId).filter((job) =>
+    propertyInScope(membership, job.propertyId),
+  );
+  if (membership.role === "cleaner") {
+    jobs = jobs.filter((job) => job.cleanerId === membership.directoryId);
+  }
+  if (membership.role === "contractor") {
+    jobs = [];
+  }
+  return jobs;
+}
+
+export function cleanerMayAccessJob(membership: Membership, job: CleaningJob) {
+  if (!membershipIsActive(membership) || membership.role !== "cleaner") return false;
+  if (job.organizationId !== membership.organizationId) return false;
+  if (job.cleanerId !== membership.directoryId) return false;
+  return propertyInScope(membership, job.propertyId);
+}
+
+export function contractorMayAccessCase(membership: Membership, item: MaintenanceCase) {
+  if (!membershipIsActive(membership) || membership.role !== "contractor") return false;
+  if (item.organizationId !== membership.organizationId) return false;
+  if (item.contractorId !== membership.directoryId) return false;
+  return propertyInScope(membership, item.propertyId);
+}
+
+export function createStaffProfile(input: {
+  organizationId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  locale?: string;
+  password?: string;
+}) {
+  const existing = getProfileByEmail(input.email);
+  if (existing) return existing;
+  const store = getStore();
+  const now = nowIso();
+  const profile: Profile = {
+    id: createId(),
+    createdAt: now,
+    updatedAt: now,
+    organizationId: input.organizationId,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    fullName: `${input.firstName} ${input.lastName}`.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone ?? "",
+    phoneCountry: "SE",
+    country: "SE",
+    locale: input.locale ?? "sv",
+    unitBand: "1-5",
+    marketingConsent: false,
+    emailVerifiedAt: now,
+    onboardingCompletedAt: now,
+    passwordHash: input.password ? hashPassword(input.password) : undefined,
+  };
+  store.profiles.push(profile);
+  return profile;
+}
+
+export function createInvitation(input: {
+  organizationId: string;
+  email: string;
+  phone?: string;
+  role: StaffRole;
+  propertyIds: string[];
+  invitedByUserId: string;
+  directoryId?: string;
+  channel?: Invitation["channel"];
+}) {
+  if (!canInviteRole("host", input.role)) {
+    throw new Error("invite-role");
+  }
+  const store = getStore();
+  const now = nowIso();
+  const id = createId();
+  const expiresAt = new Date(Date.now() + INVITE_TTL_HOURS * 60 * 60 * 1000).toISOString();
+  const ticket = encodeAccessTicket({
+    k: "invite",
+    oid: input.organizationId,
+    em: input.email.trim().toLowerCase(),
+    role: input.role,
+    iid: id,
+    props: input.propertyIds,
+    dir: input.directoryId,
+    exp: Date.parse(expiresAt),
+  });
+  const invitation: Invitation = {
+    id,
+    createdAt: now,
+    updatedAt: now,
+    organizationId: input.organizationId,
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone?.trim() || undefined,
+    role: input.role,
+    propertyIds: [...input.propertyIds],
+    invitedByUserId: input.invitedByUserId,
+    tokenHash: hashToken(ticket),
+    expiresAt,
+    channel: input.channel ?? (input.phone ? "sms" : "email"),
+    directoryId: input.directoryId,
+  };
+  store.invitations.push(invitation);
+  return { invitation, rawToken: ticket };
+}
+
+export function listInvitations(organizationId: string) {
+  return getStore()
+    .invitations.filter((item) => item.organizationId === organizationId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getInvitationByToken(rawToken: string) {
+  const hashed = hashToken(rawToken);
+  return getStore().invitations.find((item) => item.tokenHash === hashed);
+}
+
+export function revokeInvitation(organizationId: string, invitationId: string) {
+  const invitation = getStore().invitations.find(
+    (item) => item.id === invitationId && item.organizationId === organizationId,
+  );
+  if (!invitation) throw new Error("missing");
+  invitation.revokedAt = nowIso();
+  invitation.updatedAt = invitation.revokedAt;
+  return invitation;
+}
+
+function directoryForInvite(invitation: Invitation, profile: Profile) {
+  if (invitation.directoryId) return invitation.directoryId;
+  if (invitation.role === "cleaner") {
+    const existing = getStore().cleaners.find(
+      (item) =>
+        item.organizationId === invitation.organizationId &&
+        item.email.toLowerCase() === invitation.email,
+    );
+    if (existing) return existing.id;
+    return addCleaner(invitation.organizationId, {
+      name: profile.fullName,
+      contactName: profile.fullName,
+      phone: invitation.phone ?? profile.phone,
+      email: invitation.email,
+    }).id;
+  }
+  if (invitation.role === "contractor") {
+    const existing = getStore().contractors.find(
+      (item) =>
+        item.organizationId === invitation.organizationId &&
+        item.email.toLowerCase() === invitation.email,
+    );
+    if (existing) return existing.id;
+    return addContractor(invitation.organizationId, {
+      name: profile.fullName,
+      contactName: profile.fullName,
+      trade: "Allmänt",
+      email: invitation.email,
+      phone: invitation.phone ?? profile.phone,
+    }).id;
+  }
+  return undefined;
+}
+
+export function acceptInvitation(
+  rawToken: string,
+  opts?: { firstName?: string; lastName?: string; password?: string },
+) {
+  const ticket = decodeAccessTicket(rawToken);
+  if (!ticket || ticket.k !== "invite" || isAccessTicketExpired(ticket)) return null;
+  const invitation = getInvitationByToken(rawToken);
+  if (!invitation || invitation.id !== ticket.iid) return null;
+  if (invitation.acceptedAt || invitation.revokedAt) return null;
+  if (Date.parse(invitation.expiresAt) < Date.now()) return null;
+
+  const names = `${opts?.firstName ?? ""} ${opts?.lastName ?? ""}`.trim();
+  const [firstFromEmail] = invitation.email.split("@");
+  const profile = createStaffProfile({
+    organizationId: invitation.organizationId,
+    firstName: opts?.firstName?.trim() || firstFromEmail || "Gäst",
+    lastName: opts?.lastName?.trim() || "",
+    email: invitation.email,
+    phone: invitation.phone,
+    password: opts?.password,
+  });
+  if (names) {
+    profile.firstName = opts?.firstName?.trim() || profile.firstName;
+    profile.lastName = opts?.lastName?.trim() || profile.lastName;
+    profile.fullName = names || profile.fullName;
+  }
+  if (opts?.password) setProfilePassword(profile.id, opts.password);
+  profile.emailVerifiedAt = profile.emailVerifiedAt ?? nowIso();
+  profile.onboardingCompletedAt = profile.onboardingCompletedAt ?? nowIso();
+
+  const duplicate = listMembershipsForUser(profile.id).find(
+    (item) =>
+      item.organizationId === invitation.organizationId &&
+      item.role === invitation.role &&
+      !item.revokedAt,
+  );
+  const membership =
+    duplicate ??
+    createMembership({
+      userId: profile.id,
+      organizationId: invitation.organizationId,
+      role: invitation.role,
+      propertyIds: invitation.propertyIds,
+      directoryId: directoryForInvite(invitation, profile),
+    });
+
+  const now = nowIso();
+  invitation.acceptedAt = now;
+  invitation.updatedAt = now;
+  return { profile, membership, invitation };
+}
+
+export function createLoginLink(input: {
+  userId: string;
+  intendedRole?: StaffRole;
+  intendedOrganizationId?: string;
+}) {
+  const profile = getProfile(input.userId);
+  if (!profile) throw new Error("missing");
+  const store = getStore();
+  const now = nowIso();
+  const id = createId();
+  const expiresAt = new Date(Date.now() + LOGIN_LINK_TTL_MINUTES * 60 * 1000).toISOString();
+  const ticket = encodeAccessTicket({
+    k: "login",
+    oid: input.intendedOrganizationId ?? profile.organizationId,
+    em: profile.email,
+    role: input.intendedRole ?? "host",
+    lid: id,
+    props: [],
+    exp: Date.parse(expiresAt),
+  });
+  const link: LoginLink = {
+    id,
+    createdAt: now,
+    updatedAt: now,
+    userId: profile.id,
+    tokenHash: hashToken(ticket),
+    expiresAt,
+    intendedRole: input.intendedRole,
+    intendedOrganizationId: input.intendedOrganizationId,
+  };
+  store.loginLinks.push(link);
+  return { link, rawToken: ticket };
+}
+
+export function consumeLoginLink(rawToken: string) {
+  const ticket = decodeAccessTicket(rawToken);
+  if (!ticket || ticket.k !== "login" || isAccessTicketExpired(ticket)) return null;
+  const store = getStore();
+  const link = store.loginLinks.find((item) => item.tokenHash === hashToken(rawToken));
+  if (!link || (ticket.lid && link.id !== ticket.lid)) return null;
+  if (link.usedAt) return null;
+  if (Date.parse(link.expiresAt) < Date.now()) return null;
+  const profile = getProfile(link.userId);
+  if (!profile) return null;
+  const now = nowIso();
+  link.usedAt = now;
+  link.updatedAt = now;
+  const membership = getActiveMembership(
+    profile.id,
+    link.intendedOrganizationId,
+    link.intendedRole,
+  );
+  return { profile, link, membership };
+}
+
+export function setGuestPin(organizationId: string, propertyId: string, pin: string | null) {
+  const property = getStore().properties.find(
+    (item) => item.id === propertyId && item.organizationId === organizationId,
+  );
+  if (!property) throw new Error("Bostaden hittades inte");
+  const trimmed = pin?.trim() ?? "";
+  property.guestPinHash = trimmed ? hashPassword(trimmed) : undefined;
+  property.updatedAt = nowIso();
+  return property;
+}
+
+export function setGuestLinkExpiry(
+  organizationId: string,
+  propertyId: string,
+  expiresAt: string | null,
+) {
+  const property = getStore().properties.find(
+    (item) => item.id === propertyId && item.organizationId === organizationId,
+  );
+  if (!property) throw new Error("Bostaden hittades inte");
+  property.guestLinkExpiresAt = expiresAt || undefined;
+  property.updatedAt = nowIso();
+  return property;
+}
+
+export function revokeGuestLink(organizationId: string, propertyId: string) {
+  const property = getStore().properties.find(
+    (item) => item.id === propertyId && item.organizationId === organizationId,
+  );
+  if (!property) throw new Error("Bostaden hittades inte");
+  property.guestLinkRevokedAt = nowIso();
+  property.updatedAt = property.guestLinkRevokedAt;
+  return property;
+}
+
+export function verifyGuestPin(property: Property, pin: string) {
+  if (!property.guestPinHash) return true;
+  return verifyPassword(pin.trim(), property.guestPinHash);
+}
+
+function sanitizedOwnerProperty(property: Property) {
+  const store = getStore();
+  const org = getOrganization(property.organizationId);
+  const cases = store.cases
+    .filter((c) => c.propertyId === property.id && c.status !== "cancelled")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((item) => ({
+      id: item.id,
+      reference: item.reference,
+      title: item.title,
+      category: item.category,
+      status: item.status,
+      priority: item.priority,
+      createdAt: item.createdAt,
+      completedAt: item.completedAt,
+      approvedAt: item.approvedAt,
+      dueAt: item.dueAt,
+      costEstimate: item.costEstimate,
+      photos:
+        item.status === "approved"
+          ? store.attachments
+              .filter((a) => a.caseId === item.id && a.kind !== "reported")
+              .map((a) => ({ id: a.id, kind: a.kind, url: a.url, caption: a.caption }))
+          : [],
+    }));
+  const cleaning = store.cleaningJobs
+    .filter((j) => j.propertyId === property.id)
+    .sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))
+    .slice(0, 10)
+    .map((job) => ({
+      id: job.id,
+      status: job.status,
+      scheduledAt: job.scheduledAt,
+      completedAt: job.completedAt,
+      approvedAt: job.approvedAt,
+    }));
+  return {
+    orgName: org?.name ?? "",
+    property: {
+      id: property.id,
+      name: property.name,
+      address: property.address,
+      city: property.city,
+      country: property.country,
+      imageUrl: property.imageUrl,
+      guestReady: Boolean(property.guestReady),
+    },
+    cases,
+    cleaning,
+    openCount: cases.filter((c) => OPEN_STATUSES.includes(c.status)).length,
+    approvedCount: cases.filter((c) => c.status === "approved").length,
+  };
+}
+
+export function getOwnerViewsForMembership(membership: Membership) {
+  if (!membershipIsActive(membership) || membership.role !== "owner") return [];
+  return listPropertiesForMembership(membership)
+    .map((property) => sanitizedOwnerProperty(property))
+    .filter(Boolean);
+}
+
+export function switchActiveMembership(userId: string, membershipId: string) {
+  const membership = getMembership(membershipId);
+  if (!membershipIsActive(membership) || membership.userId !== userId) return null;
+  return membership;
 }

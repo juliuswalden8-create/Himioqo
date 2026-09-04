@@ -4,14 +4,14 @@ import Image from "next/image";
 import type { Dictionary } from "@/i18n/messages";
 
 const images: Record<string, string> = {
-  restaurants: "/landing/area-restaurant.jpg",
-  clubs: "/landing/area-club.jpg",
-  beaches: "/landing/area-beach.jpg",
-  taxi: "/landing/area-taxi.jpg",
-  boat: "/landing/area-boat.jpg",
-  golf: "/landing/area-golf.jpg",
-  shopping: "/landing/area-shopping.jpg",
-  activities: "/landing/area-activity.jpg",
+  restaurants: "/landing/area-restaurant-costa.jpg",
+  clubs: "/landing/area-club-costa.jpg",
+  beaches: "/landing/area-beach-costa.jpg",
+  taxi: "/landing/area-taxi-transfer.jpg",
+  boat: "/landing/area-boat-costa.jpg",
+  golf: "/landing/area-golf-costa.jpg",
+  shopping: "/landing/area-shopping-costa.jpg",
+  activities: "/landing/area-activity-costa.jpg",
 };
 
 export function LocalRecommendations({ dict }: { dict: Dictionary }) {

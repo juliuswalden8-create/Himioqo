@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import {
   assignPlaceAction,
+  copyGuideAction,
   copyPlacesAction,
   createPlaceAction,
   moveCategoryAction,
@@ -22,9 +23,12 @@ import {
 } from "@/lib/guide-actions";
 import { rotateOwnerAccessAction, toggleOwnerAccessAction } from "@/lib/owner-actions";
 import { OwnerAccessForm } from "@/components/property/owner-access-form";
+import { GuestAccessForm } from "@/components/property/guest-access-form";
+import { OrderQrForm } from "@/components/property/order-qr-form";
 import { QrPanel } from "@/components/property/qr-panel";
 import {
   getGuideAnalytics,
+  getOpenQrSignOrder,
   getOrganization,
   getProfile,
   getProperty,
@@ -34,7 +38,8 @@ import {
   listPlaces,
   listProperties,
 } from "@/lib/data/store";
-import { PLACE_CATEGORIES, type MonetizationKind } from "@/lib/types";
+import { PLACE_CATEGORIES, PROPERTY_TYPES, type MonetizationKind } from "@/lib/types";
+import { propertyTypeLabel } from "@/lib/labels";
 import { getSession } from "@/lib/session";
 import { appUrl, cn } from "@/lib/utils";
 import { pickText } from "@/lib/places";
@@ -64,6 +69,7 @@ export default async function PropertyAdminPage({
   const others = listProperties(session.organizationId).filter((item) => item.id !== property.id);
   const stats = getGuideAnalytics(session.organizationId, property.id);
   const ownerLinks = listOwnerAccess(session.organizationId, property.id);
+  const openQrOrder = getOpenQrSignOrder(session.organizationId, property.id);
   const tab = ["info", "places", "qr", "owner", "analytics"].includes(tabRaw ?? "")
     ? (tabRaw as "info" | "places" | "qr" | "owner" | "analytics")
     : "info";
@@ -125,9 +131,26 @@ export default async function PropertyAdminPage({
                 <Field label={dict.homes.name} name="name" defaultValue={property.name} />
                 <Field label={dict.homes.address} name="address" defaultValue={property.address} />
                 <Field label={dict.propertyForm.city} name="city" defaultValue={property.city} />
+                <FormField label={dict.propertyForm.type} htmlFor="type">
+                  <NativeSelect id="type" name="type" defaultValue={property.type}>
+                    {PROPERTY_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {propertyTypeLabel(dict, type)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </FormField>
                 <Field label={dict.homes.lat} name="lat" defaultValue={property.lat?.toString() ?? ""} />
                 <Field label={dict.homes.lng} name="lng" defaultValue={property.lng?.toString() ?? ""} />
               </div>
+              <FormField
+                label={dict.propertyForm.notes}
+                htmlFor="notes"
+                hint={dict.propertyForm.notesHelp}
+                className="mt-3"
+              >
+                <Textarea id="notes" name="notes" defaultValue={property.notes ?? ""} />
+              </FormField>
               <Button type="submit" className="mt-4">
                 {dict.homes.save}
               </Button>
@@ -147,6 +170,9 @@ export default async function PropertyAdminPage({
                 <Field label={dict.homes.checkIn} name="checkIn" defaultValue={guide.checkIn} />
                 <Field label={dict.homes.checkOut} name="checkOut" defaultValue={guide.checkOut} />
               </div>
+              {!guide.wifiName ? (
+                <p className="text-sm text-muted-foreground">{dict.homes.wifiEmpty}</p>
+              ) : null}
               <Bilingual label={dict.homes.rules} name="rules" sv={guide.houseRules.sv ?? ""} en={guide.houseRules.en ?? ""} dict={dict} area />
               <Bilingual label={dict.homes.parking} name="parking" sv={guide.parking.sv ?? ""} en={guide.parking.en ?? ""} dict={dict} area />
               <Bilingual label={dict.homes.waste} name="waste" sv={guide.waste.sv ?? ""} en={guide.waste.en ?? ""} dict={dict} area />
@@ -154,7 +180,7 @@ export default async function PropertyAdminPage({
               <div>
                 <Label>{dict.homes.numbers}</Label>
                 <Textarea name="numbers" defaultValue={numbersText} className="mt-1" />
-                <p className="mt-1 text-xs text-muted-foreground">Namn|telefon</p>
+                <p className="mt-1 text-xs text-muted-foreground">{dict.homes.numbersHelp}</p>
               </div>
               {(["ac", "washer", "dishwasher", "pool", "other"] as const).map((key) => (
                 <Bilingual
@@ -169,6 +195,23 @@ export default async function PropertyAdminPage({
               ))}
               <Button type="submit">{dict.homes.save}</Button>
             </form>
+            {others.length ? (
+              <form action={copyGuideAction} className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+                <h2 className="text-sm font-semibold text-navy-800">{dict.homes.copyGuide}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{dict.homes.copyGuideHelp}</p>
+                <input type="hidden" name="propertyId" value={property.id} />
+                <NativeSelect name="fromPropertyId" className="mt-3">
+                  {others.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+                <Button type="submit" className="mt-3">
+                  {dict.homes.copy}
+                </Button>
+              </form>
+            ) : null}
             <section className="rounded-2xl border border-border bg-white p-5 shadow-soft">
               <h2 className="text-sm font-semibold text-navy-800">{dict.homes.order}</h2>
               <ul className="mt-3 divide-y divide-border">
@@ -382,6 +425,20 @@ export default async function PropertyAdminPage({
               previewUrl={`/qr/${property.reportToken}`}
               dict={dict}
             />
+            {session.role === "host" ? (
+              <OrderQrForm
+                dict={dict}
+                propertyId={property.id}
+                hasOpenOrder={Boolean(openQrOrder)}
+                defaults={{
+                  name: profile?.fullName ?? "",
+                  address: property.address,
+                  city: property.city,
+                  phone: profile?.phone ?? org?.supportPhone ?? "",
+                  email: profile?.email ?? org?.supportEmail ?? "",
+                }}
+              />
+            ) : null}
             <form
               action={rotatePropertyTokenAction}
               className="border-t border-border pt-4"
@@ -392,6 +449,12 @@ export default async function PropertyAdminPage({
                 {dict.homes.rotate}
               </Button>
             </form>
+            <GuestAccessForm
+              dict={dict}
+              propertyId={property.id}
+              hasPin={Boolean(property.guestPinHash)}
+              expiresAt={property.guestLinkExpiresAt}
+            />
           </section>
         ) : null}
 

@@ -1,4 +1,5 @@
 import { Logo } from "@/components/brand/logo";
+import { StatusBadge } from "@/components/status-badge";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getCaseByTrackToken } from "@/lib/data/store";
 
@@ -24,6 +25,17 @@ export default async function TrackThanksPage({
           <p className="mt-4 rounded-2xl bg-navy-50 px-4 py-3 text-sm font-medium text-navy-800">
             {interpolate(dict.report.thanksRef, { ref: item.reference })}
           </p>
+        ) : null}
+        {item ? (
+          <div className="mt-5 space-y-3">
+            <p className="text-sm text-muted-foreground">{dict.report.trackHelp}</p>
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {dict.report.trackStatus}
+              </p>
+              <StatusBadge status={item.status} dict={dict} />
+            </div>
+          </div>
         ) : null}
       </div>
     </div>

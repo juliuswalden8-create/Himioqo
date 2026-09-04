@@ -121,6 +121,18 @@ export default async function CaseDetailPage({
               <dt className="text-muted-foreground">{dict.caseDetail.reportedBy}</dt>
               <dd className="truncate text-navy-800">{item.reporterName || "—"}</dd>
             </div>
+            {item.dueAt ? (
+              <div className="flex gap-2">
+                <dt className="text-muted-foreground">{dict.caseDetail.due}</dt>
+                <dd className="text-navy-800">{formatDate(item.dueAt)}</dd>
+              </div>
+            ) : null}
+            {item.costEstimate != null ? (
+              <div className="flex gap-2">
+                <dt className="text-muted-foreground">{dict.caseDetail.cost}</dt>
+                <dd className="text-navy-800">{item.costEstimate}</dd>
+              </div>
+            ) : null}
           </dl>
           <div className="mt-4 border-t border-border pt-4">
             <TranslatableText
@@ -141,6 +153,8 @@ export default async function CaseDetailPage({
               priority={item.priority}
               contractorId={item.contractorId}
               instructions={item.workInstructions}
+              dueAt={item.dueAt}
+              costEstimate={item.costEstimate}
               contractors={contractors.map((c) => ({
                 id: c.id,
                 name: c.name,
