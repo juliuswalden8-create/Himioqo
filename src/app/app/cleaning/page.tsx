@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { Metadata } from "next";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import {
   addCleanerAction,
   createCleaningJobAction,
@@ -16,7 +18,6 @@ import {
 import { checklistLabelsFromDict } from "@/lib/cleaning";
 import {
   getOrganization,
-  getProfile,
   listCleaners,
   listCleaningJobs,
   listCleaningSchedules,
@@ -30,6 +31,10 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.cleaning.title);
+}
+
 const PLANNED: CleaningStatus[] = ["scheduled", "accepted"];
 const ACTIVE: CleaningStatus[] = ["in_progress", "returned"];
 const DONE: CleaningStatus[] = ["completed", "approved"];
@@ -41,10 +46,9 @@ export default async function CleaningPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const viewerLocale = profile?.locale || locale;
+  const viewerLocale = locale;
   const dict = await getDictionary(viewerLocale);
   const jobs = listCleaningJobs(session.organizationId);
   const properties = listProperties(session.organizationId);

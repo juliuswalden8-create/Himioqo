@@ -35,8 +35,9 @@ export function AudienceProvider({
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
     if (opts?.scrollTo) {
       const id = opts.scrollTo;
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       window.setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById(id)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
       }, 40);
     }
   }, []);

@@ -48,6 +48,7 @@ export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary })
             return;
           }
           if (result.error === "email") setError(f.invalidEmail);
+          else if (result.error === "phone") setError(f.invalidPhone);
           else if (result.error === "consent") setError(f.consentRequired);
           else if (result.error === "rate") setError(dict.errors.rate);
           else if (result.error === "required") setError(f.required);
@@ -155,7 +156,7 @@ export function DemoForm({ locale, dict }: { locale: string; dict: Dictionary })
 export function DemoSection({ locale, dict }: { locale: string; dict: Dictionary }) {
   const f = dict.marketing.form;
   return (
-    <section id="demo" className="py-20 lg:py-24">
+    <section id="demo" className="scroll-mt-[5.75rem] py-16 lg:py-20">
       <div className="container-marketing max-w-3xl">
         <h2 className="font-display text-3xl font-semibold text-ocean sm:text-4xl">{f.title}</h2>
         <p className="mt-3 text-base leading-relaxed text-navy-600">{f.subtitle}</p>

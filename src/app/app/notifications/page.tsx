@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { markNotificationsReadAction } from "@/lib/actions";
 import {
   getOrganization,
-  getProfile,
   listNotifications,
   unreadNotificationCount,
 } from "@/lib/data/store";
@@ -17,13 +18,16 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.notifications.title);
+}
+
 export default async function NotificationsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const viewerLocale = profile?.locale || locale;
+  const viewerLocale = locale;
   const dict = await getDictionary(viewerLocale);
 
   const notifications = listNotifications(session.organizationId);

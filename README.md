@@ -77,7 +77,7 @@ NEXT_DIST_DIR=.next-build npm run build
 
 With no Supabase keys configured, Homioqo runs entirely on an in-memory dataset
 seeded from `src/lib/data/seed.ts`: the fictional company **Bergström
-Fastigheter**, manager **Anna Bergström**, five properties (Villa Solsidan, Casa
+Fastigheter**, manager **Anna Bergström**, five properties (Villa Sol, Casa
 Brisa, Mälarhusen 7, Strandvägen 14B, Vasagatan 22), plus contractors such as
 **Costa Service Marbella** and cleaner **Maria Cleaning**.
 

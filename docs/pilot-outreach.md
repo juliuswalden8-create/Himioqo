@@ -20,8 +20,8 @@ Password for all: `demo1234`
 | --- | --- | --- |
 | Host | `anna@homioqo.se` | Bergström Fastigheter |
 | Cleaner | `maria@homioqo.se` | Solsidan + Mälarhusen |
-| Contractor | `omar@homioqo.se` | Assigned lock work on Villa Solsidan |
-| Owner | `lina@homioqo.se` | Villa Solsidan only |
+| Contractor | `omar@homioqo.se` | Assigned lock work on Villa Sol |
+| Owner | `lina@homioqo.se` | Villa Sol only |
 | Other host | `erik@norrbo.se` | Separate org, for isolation checks |
 | Guest | no login | `/g/qr_strand14` or `/g/qr_solsidan` |
 

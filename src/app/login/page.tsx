@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.login.title);
+}
 
 export default async function LoginPage({
   searchParams,

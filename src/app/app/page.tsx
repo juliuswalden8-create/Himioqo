@@ -7,7 +7,9 @@ import { ReadyBadge } from "@/components/cleaning-status";
 import { SafePhoto } from "@/components/safe-photo";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import {
   getCleaningJob,
   getDashboardStats,
@@ -31,6 +33,10 @@ import type { Dictionary } from "@/i18n/messages";
 
 export const dynamic = "force-dynamic";
 
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.nav.overview);
+}
+
 function weekDelta(dict: Dictionary, value: number) {
   if (value === 0) return dict.dashboard.statDeltaNone;
   const delta = value > 0 ? `+${value}` : String(value);
@@ -50,7 +56,7 @@ export default async function OverviewPage() {
   const cleaners = listCleaners(session.organizationId);
   const showTeamHint = contractors.length === 0 && cleaners.length === 0;
   const locale = await getLocale();
-  const dict = await getDictionary(profile?.locale || locale);
+  const dict = await getDictionary(locale);
   const days = trialDaysLeft(session.organizationId);
   const ended = isTrialEnded(session.organizationId);
   const trialLabel =
@@ -158,7 +164,7 @@ export default async function OverviewPage() {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {interpolate(dict.dashboard.cleaningNoticeTime, {
-                  time: formatTime(notice.createdAt, profile?.locale || locale),
+                  time: formatTime(notice.createdAt, locale),
                 })}
                 {" · "}
                 <Link href={`/app/properties/${noticeJob.propertyId}`} className="font-medium text-navy-700 underline">

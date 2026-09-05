@@ -28,9 +28,13 @@ import { PROPERTY_TYPES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(await getLocale());
+  return {
+    title: dict.onboarding.title,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function OnboardingPage({
   searchParams,
@@ -45,7 +49,7 @@ export default async function OnboardingPage({
   if (profile.onboardingCompletedAt) redirect("/app");
 
   const locale = await getLocale();
-  const dict = await getDictionary(profile.locale || locale);
+  const dict = await getDictionary(locale);
   const { step: stepRaw } = await searchParams;
   const properties = listProperties(session.organizationId);
   const first = properties[0];

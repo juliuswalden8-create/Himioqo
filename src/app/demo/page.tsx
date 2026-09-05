@@ -1,17 +1,28 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { GUEST_GUIDE_DEMO_HREF, startPilotHref } from "@/components/landing/links";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.demo.title);
+}
 
 export default async function DemoPage() {
   const locale = await getLocale();
   const dict = await getDictionary(locale);
-  const steps = [
-    { title: dict.demo.step1Title, text: dict.demo.step1Text },
-    { title: dict.demo.step2Title, text: dict.demo.step2Text },
-    { title: dict.demo.step3Title, text: dict.demo.step3Text },
+  const token = GUEST_GUIDE_DEMO_HREF;
+  const features = [
+    { href: `${token}/info`, title: dict.demo.wifi },
+    { href: `${token}/info`, title: dict.demo.rules },
+    { href: `${token}/info`, title: dict.demo.checkin },
+    { href: `${token}/area`, title: dict.demo.area },
+    { href: `${token}/report`, title: dict.demo.report },
+    { href: token, title: dict.demo.contact },
   ];
 
   return (
@@ -23,26 +34,25 @@ export default async function DemoPage() {
           {dict.demo.title}
         </h1>
         <p className="text-base leading-relaxed text-muted-foreground">{dict.demo.intro}</p>
-        <ol className="space-y-4">
-          {steps.map((step, index) => (
-            <li
-              key={step.title}
-              className="rounded-2xl border border-border bg-white p-5 shadow-soft"
-            >
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {index + 1}
-              </p>
-              <h2 className="mt-1 text-lg font-semibold text-navy-800">{step.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
+        <p className="font-display text-xl font-semibold text-ocean">{dict.demo.homeName}</p>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {features.map((feature) => (
+            <li key={feature.title}>
+              <Link
+                href={feature.href}
+                className="block rounded-2xl border border-border bg-white px-4 py-4 text-sm font-medium text-ocean shadow-soft hover:border-ocean/30"
+              >
+                {feature.title}
+              </Link>
             </li>
           ))}
-        </ol>
+        </ul>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button asChild variant="cta">
-            <Link href="/g/qr_strand14">{dict.demo.tryGuest}</Link>
+            <Link href={token}>{dict.demo.tryGuest}</Link>
           </Button>
           <Button asChild variant="secondary">
-            <Link href="/login">{dict.demo.tryHost}</Link>
+            <Link href={startPilotHref("private")}>{dict.demo.tryHost}</Link>
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">{dict.demo.note}</p>

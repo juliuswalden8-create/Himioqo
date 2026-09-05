@@ -34,6 +34,9 @@ export function RegisterForm({
 
   return (
     <form action={action} className="relative space-y-5">
+      <p className="text-sm text-muted-foreground">
+        {isPrivate ? dict.register.subtitlePrivate : dict.register.subtitleCompany}
+      </p>
       <input type="hidden" name="formLoadedAt" value={loadedAt} />
       <input
         type="text"

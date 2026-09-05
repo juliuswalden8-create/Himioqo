@@ -16,6 +16,15 @@ export async function getLocale() {
   const jar = await cookies();
   const cookie = jar.get(LOCALE_COOKIE)?.value;
   if (cookie) return normalizeLocale(cookie);
+  try {
+    const { getSession } = await import("@/lib/session");
+    const { getProfile } = await import("@/lib/data/store");
+    const session = await getSession();
+    const profile = session ? getProfile(session.profileId) : undefined;
+    if (profile?.locale) return normalizeLocale(profile.locale);
+  } catch {
+    /* Public pages still work if the session layer is unavailable. */
+  }
   const header = (await headers()).get("accept-language") ?? "";
   const first = header.split(",")[0]?.split(";")[0]?.trim();
   return normalizeLocale(first);

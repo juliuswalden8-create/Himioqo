@@ -6,7 +6,6 @@ import { DemoSection } from "@/components/landing/demo-form";
 import { DigitalGuestGuide } from "@/components/landing/digital-guest-guide";
 import { Faq } from "@/components/landing/faq";
 import { FinalCta } from "@/components/landing/final-cta";
-import { FounderNote } from "@/components/landing/founder-note";
 import { GetStarted } from "@/components/landing/get-started";
 import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
@@ -53,7 +52,6 @@ function MarketingFrame({ dict, locale }: { dict: Dictionary; locale: string }) 
         <BusinessDashboard dict={dict} />
         <GetStarted dict={dict} />
         <TrustPoints dict={dict} />
-        <FounderNote dict={dict} />
         <Team dict={dict} />
         <Pricing dict={dict} />
         <Faq dict={dict} />

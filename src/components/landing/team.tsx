@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 const people = [
   {
     id: "founder" as const,
-    src: "/team/founder.webp",
+    src: "/team/founder-photo.webp",
     objectPosition: "center",
   },
   {
     id: "coFounder" as const,
-    src: "/team/co-founder.webp",
+    src: "/team/co-founder-photo.webp",
     objectPosition: "center",
   },
 ];
@@ -21,7 +21,7 @@ export function Team({ dict }: { dict: Dictionary }) {
   const m = dict.marketing.team;
 
   return (
-    <section className="bg-ivory py-20 lg:py-24" aria-labelledby="team-heading">
+    <section id="team" className="scroll-mt-[5.75rem] bg-ivory py-16 pb-12 lg:py-20 lg:pb-14" aria-labelledby="team-heading">
       <div className="container-marketing">
         <div className="mx-auto max-w-2xl text-center">
           <h2 id="team-heading" className="font-display text-3xl font-semibold text-ocean sm:text-4xl">
@@ -46,7 +46,7 @@ export function Team({ dict }: { dict: Dictionary }) {
                     height={960}
                     sizes="(min-width: 640px) 23rem, calc(100vw - 2rem)"
                     quality={88}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover contrast-[0.94] brightness-[1.03]"
                     style={{ objectPosition: person.objectPosition }}
                   />
                 </div>

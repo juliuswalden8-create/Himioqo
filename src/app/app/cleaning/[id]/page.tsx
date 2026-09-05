@@ -6,12 +6,13 @@ import { SafePhoto } from "@/components/safe-photo";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import type { Metadata } from "next";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { approveCleaningAction, returnCleaningAction } from "@/lib/cleaning-actions";
 import {
   getCleaningJob,
   getOrganization,
-  getProfile,
   markCleaningNoticeRead,
 } from "@/lib/data/store";
 import { formatDateTime } from "@/lib/format";
@@ -19,6 +20,10 @@ import { getRequestOrigin } from "@/lib/request-origin";
 import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.cleaning.title);
+}
 
 export default async function CleaningDetailPage({
   params,
@@ -32,10 +37,9 @@ export default async function CleaningDetailPage({
   if (!job) notFound();
   markCleaningNoticeRead(session.organizationId, job.id);
 
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const dict = await getDictionary(profile?.locale || locale);
+  const dict = await getDictionary(locale);
   const origin = await getRequestOrigin();
   const link = `${origin}/c/${job.accessToken}`;
   const done = job.checklist.filter((item) => item.done).length;

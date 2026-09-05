@@ -20,7 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary(locale);
   const m = dict.marketing.meta;
   return {
-    title: m.title,
+    title: {
+      default: m.title,
+      template: "%s · Homioqo",
+    },
     description: m.description,
     metadataBase: new URL(siteOrigin()),
     applicationName: "Homioqo",

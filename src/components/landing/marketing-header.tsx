@@ -25,20 +25,21 @@ export function MarketingHeader({ dict, locale }: { dict: Dictionary; locale: st
   const { audience, setAudience } = useAudience();
   const [open, setOpen] = useState(false);
   const m = dict.marketing;
-  const registerHref = audience === "private" ? "/register?segment=private" : "/register";
+  const registerHref = audience === "company" ? "/register?segment=company" : "/register?segment=private";
 
   const links = [
     { id: "how", href: "#sa-fungerar-det", label: m.nav.how },
     { id: "features", href: "#funktioner", label: m.nav.features },
     {
       id: "benefits",
-      href: audience === "company" ? "#foretag" : "#fordelar",
+      href: "#fordelar",
       label: m.nav.benefits,
+      privateOnly: true,
     },
     { id: "business", href: "#foretag", label: m.nav.business, company: true },
     { id: "pricing", href: "#priser", label: m.nav.pricing },
     { id: "faq", href: "#faq", label: m.nav.faq },
-  ];
+  ].filter((link) => audience === "private" || !link.privateOnly);
 
   function go(event: MouseEvent<HTMLAnchorElement>, company?: boolean) {
     setOpen(false);

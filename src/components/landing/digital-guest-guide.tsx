@@ -15,7 +15,10 @@ import {
   UtensilsCrossed,
   Wifi,
 } from "lucide-react";
+import Link from "next/link";
 import { PhoneFrame } from "@/components/landing/phone-frame";
+import { PRODUCT_DEMO_HREF } from "@/components/landing/links";
+import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +44,7 @@ export function DigitalGuestGuide({ dict }: { dict: Dictionary }) {
   const Icon = featureIcons[active] ?? Home;
 
   return (
-    <section id="funktioner" className="bg-sage/60 py-20 lg:py-24">
+    <section id="funktioner" className="scroll-mt-[5.75rem] bg-sage/60 py-14 lg:py-16">
       <div className="container-marketing">
         <h2 className="max-w-xl font-display text-3xl font-semibold text-ocean sm:text-4xl">
           {m.title}
@@ -101,6 +104,11 @@ export function DigitalGuestGuide({ dict }: { dict: Dictionary }) {
               </div>
             </PhoneFrame>
           </div>
+        </div>
+        <div className="mt-8">
+          <Button size="lg" variant="outline" asChild>
+            <Link href={PRODUCT_DEMO_HREF}>{dict.marketing.cta.demo}</Link>
+          </Button>
         </div>
       </div>
     </section>

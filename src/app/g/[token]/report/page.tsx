@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GuestShell } from "@/components/guest/guest-shell";
 import { TenantReportForm } from "@/components/tenant-report-form";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getGuestGuide } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.report.title);
+}
 
 export default async function GuestReportPage({
   params,

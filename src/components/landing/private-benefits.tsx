@@ -12,7 +12,7 @@ export function PrivateBenefits({ dict }: { dict: Dictionary }) {
       id="fordelar"
       hidden={audience !== "private"}
       aria-hidden={audience !== "private"}
-      className={`bg-sage/70 py-20 lg:py-24 ${audience !== "private" ? "hidden" : ""}`}
+      className={`scroll-mt-[5.75rem] bg-sage/70 py-14 lg:py-16 ${audience !== "private" ? "hidden" : ""}`}
     >
       <div className="container-marketing">
         <h2 className="max-w-xl font-display text-3xl font-semibold text-ocean sm:text-4xl">

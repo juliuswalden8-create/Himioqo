@@ -6,14 +6,20 @@ import { Button } from "@/components/ui/button";
 import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { createManagerCaseAction } from "@/lib/actions";
-import { getOrganization, getProfile, listProperties } from "@/lib/data/store";
+import { getOrganization, listProperties } from "@/lib/data/store";
 import { categoryLabel, priorityLabel } from "@/lib/labels";
 import { getSession } from "@/lib/session";
 import { CASE_CATEGORIES, CASE_PRIORITIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.dashboard.createCase);
+}
 
 export default async function NewCasePage({
   searchParams,
@@ -22,10 +28,9 @@ export default async function NewCasePage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const dict = await getDictionary(profile?.locale || locale);
+  const dict = await getDictionary(locale);
   const properties = listProperties(session.organizationId);
   const sp = await searchParams;
   const propertyRaw = Array.isArray(sp.propertyId) ? sp.propertyId[0] : sp.propertyId;

@@ -9,14 +9,15 @@ import { Button } from "@/components/ui/button";
 import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { interpolate } from "@/i18n/interpolate";
 import { createPropertyAction } from "@/lib/guide-actions";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 import {
   canAddProperty,
   getOrganization,
-  getProfile,
   getPropertyTraffic,
   listProperties,
   propertyFilterOptions,
@@ -27,16 +28,19 @@ import { PROPERTY_HEALTH, PROPERTY_TYPES, type PropertyHealth } from "@/lib/type
 
 export const dynamic = "force-dynamic";
 
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.homes.title);
+}
+
 export default async function PropertiesPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireHostSession();
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const dict = await getDictionary(profile?.locale || locale);
+  const dict = await getDictionary(locale);
 
   const sp = await searchParams;
   const one = (key: string) => (Array.isArray(sp[key]) ? sp[key][0] : sp[key]) ?? undefined;

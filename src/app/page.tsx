@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { MarketingSite } from "@/components/landing/marketing-site";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { resolveAudience } from "@/lib/audience";
-import { FOUNDER_FIRST_NAME } from "@/lib/constants";
 import { siteOrigin } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary(locale);
   const m = dict.marketing.meta;
   return {
-    title: m.title,
+    title: { absolute: m.title },
     description: m.description,
     openGraph: {
       title: m.ogTitle,
@@ -49,11 +48,18 @@ export default async function LandingPage({
           height: 192,
         },
         email: "hej@homioqo.se",
-        founder: {
-          "@type": "Person",
-          name: FOUNDER_FIRST_NAME,
-          jobTitle: dict.marketing.founder.role,
-        },
+        founder: [
+          {
+            "@type": "Person",
+            name: dict.marketing.team.people.founder.name,
+            jobTitle: dict.marketing.team.people.founder.role,
+          },
+          {
+            "@type": "Person",
+            name: dict.marketing.team.people.coFounder.name,
+            jobTitle: dict.marketing.team.people.coFounder.role,
+          },
+        ],
       },
       {
         "@type": "WebSite",

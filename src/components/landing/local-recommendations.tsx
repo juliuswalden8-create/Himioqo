@@ -18,7 +18,7 @@ export function LocalRecommendations({ dict }: { dict: Dictionary }) {
   const m = dict.marketing.area;
 
   return (
-    <section className="py-20 lg:py-24">
+    <section className="py-14 lg:py-16">
       <div className="container-marketing">
         <h2 className="max-w-xl font-display text-3xl font-semibold text-ocean sm:text-4xl">
           {m.title}

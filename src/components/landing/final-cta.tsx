@@ -3,16 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAudience } from "@/components/landing/audience";
+import { BOOK_DEMO_HREF, PRODUCT_DEMO_HREF, startPilotHref } from "@/components/landing/links";
 import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/i18n/messages";
 
 export function FinalCta({ dict }: { dict: Dictionary }) {
   const { audience } = useAudience();
   const m = dict.marketing.cta;
-  const startHref = audience === "company" ? "#demo" : "/register?segment=private";
+  const primaryHref = audience === "company" ? BOOK_DEMO_HREF : startPilotHref("private");
+  const primaryLabel = audience === "company" ? m.book : m.start;
 
   return (
-    <section className="relative overflow-hidden py-24 lg:py-28">
+    <section className="relative overflow-hidden py-20 lg:py-24">
       <Image
         src="/landing/cta-villa.jpg"
         alt={m.imageAlt}
@@ -26,7 +28,7 @@ export function FinalCta({ dict }: { dict: Dictionary }) {
         <p className="mt-4 text-base leading-relaxed text-white/85">{m.text}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Button size="lg" variant="cta" asChild>
-            <Link href={startHref}>{m.start}</Link>
+            <Link href={primaryHref}>{primaryLabel}</Link>
           </Button>
           <Button
             size="lg"
@@ -34,7 +36,7 @@ export function FinalCta({ dict }: { dict: Dictionary }) {
             className="border-white/50 bg-transparent text-white hover:bg-white/10 hover:text-white"
             asChild
           >
-            <Link href="#demo">{m.demo}</Link>
+            <Link href={PRODUCT_DEMO_HREF}>{m.demo}</Link>
           </Button>
         </div>
       </div>

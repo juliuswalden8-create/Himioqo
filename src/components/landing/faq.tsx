@@ -10,7 +10,7 @@ export function Faq({ dict }: { dict: Dictionary }) {
   const m = dict.marketing.faq;
 
   return (
-    <section id="faq" className="bg-white py-20 lg:py-24">
+    <section id="faq" className="scroll-mt-[5.75rem] bg-white py-14 lg:py-16">
       <div className="container-marketing max-w-3xl">
         <h2 className="font-display text-3xl font-semibold text-ocean sm:text-4xl">{m.title}</h2>
         <Accordion type="single" collapsible className="mt-8">

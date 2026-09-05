@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AudienceToggle, useAudience } from "@/components/landing/audience";
+import { BOOK_DEMO_HREF, PRODUCT_DEMO_HREF, startPilotHref } from "@/components/landing/links";
 import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/i18n/messages";
 
@@ -10,12 +11,11 @@ export function Hero({ dict }: { dict: Dictionary }) {
   const { audience } = useAudience();
   const m = dict.marketing;
   const copy = audience === "company" ? m.hero.company : m.hero.private;
-  const primaryHref = audience === "company" ? "#demo" : "/register?segment=private";
-  const secondaryHref = audience === "company" ? "#funktioner" : "#sa-fungerar-det";
+  const primaryHref = audience === "company" ? BOOK_DEMO_HREF : startPilotHref("private");
 
   return (
     <section className="relative overflow-hidden">
-      <div className="container-marketing grid items-center gap-10 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-16">
+      <div className="container-marketing grid items-center gap-10 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-14">
         <div>
           <AudienceToggle dict={dict} />
           <h1 className="mt-6 max-w-xl font-display font-semibold text-ocean">
@@ -29,13 +29,13 @@ export function Hero({ dict }: { dict: Dictionary }) {
               <Link href={primaryHref}>{copy.primary}</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <a href={secondaryHref}>{copy.secondary}</a>
+              <Link href={PRODUCT_DEMO_HREF}>{copy.secondary}</Link>
             </Button>
           </div>
           <p className="mt-5 text-sm font-medium text-navy-500">{copy.trust}</p>
         </div>
 
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] sm:aspect-[5/4] lg:aspect-auto lg:min-h-[36rem]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] sm:aspect-[5/4] lg:aspect-auto lg:min-h-[32rem]">
           <Image
             src="/landing/hero-guest-scan.jpg"
             alt={m.hero.imageAlt}

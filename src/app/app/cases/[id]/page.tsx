@@ -8,7 +8,9 @@ import { PriorityBadge, StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import {
   approveCaseAction,
   reopenCaseAction,
@@ -17,7 +19,6 @@ import {
 import {
   getCase,
   getOrganization,
-  getProfile,
   listContractors,
 } from "@/lib/data/store";
 import { formatDate } from "@/lib/format";
@@ -27,6 +28,10 @@ import { getSession } from "@/lib/session";
 import { appUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.nav.cases);
+}
 
 export default async function CaseDetailPage({
   params,
@@ -39,10 +44,9 @@ export default async function CaseDetailPage({
   const item = getCase(session.organizationId, id);
   if (!item) notFound();
 
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const viewerLocale = profile?.locale || locale;
+  const viewerLocale = locale;
   const dict = await getDictionary(viewerLocale);
   const contractors = listContractors(session.organizationId);
 

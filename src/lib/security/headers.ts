@@ -1,14 +1,23 @@
 /**
  * Security headers for every HTML response.
  * CSP allows 'unsafe-inline' for scripts and styles because Next.js 15
- * App Router injects inline bootstraps. Do not add unsafe-eval or *.
+ * App Router injects inline bootstraps. Production must not use unsafe-eval
+ * or a wildcard script-src. Dev needs unsafe-eval for Fast Refresh.
  */
+const scriptSrc = [
+  "script-src 'self' 'unsafe-inline'",
+  process.env.NODE_ENV !== "production" ? "'unsafe-eval'" : "",
+  "https://www.googletagmanager.com https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+]
+  .filter(Boolean)
+  .join(" ");
+
 export const SECURITY_HEADERS: { key: string; value: string }[] = [
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://images.unsplash.com https://www.google-analytics.com",
       "font-src 'self'",

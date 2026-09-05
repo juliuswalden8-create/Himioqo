@@ -117,13 +117,21 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-const PRODUCTION_SITE = "https://homioqo.vercel.app";
+const PRODUCTION_FALLBACK = "https://homioqo.vercel.app";
 
-/** Public origin for QR links, emails, sitemap and metadata. */
+function configuredSiteUrl() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ||
+    ""
+  );
+}
+
+/** Public origin for canonical URLs, Open Graph, sitemap, QR links and email. */
 export function siteOrigin(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const explicit = configuredSiteUrl();
   if (process.env.VERCEL_ENV === "production") {
-    return explicit && !explicit.includes("localhost") ? explicit : PRODUCTION_SITE;
+    return explicit && !explicit.includes("localhost") ? explicit : PRODUCTION_FALLBACK;
   }
   if (explicit) return explicit;
   const vercelProd = process.env.VERCEL_PROJECT_PRODUCTION_URL?.replace(/\/$/, "");

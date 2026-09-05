@@ -6,8 +6,10 @@ import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
 import { PriorityBadge, StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
-import { getOrganization, getProfile, listCases, listProperties } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
+import { getOrganization, listCases, listProperties } from "@/lib/data/store";
 import { formatDate, formatRelative } from "@/lib/format";
 import { interpolate } from "@/i18n/interpolate";
 import { categoryLabel, priorityLabel, statusLabel } from "@/lib/labels";
@@ -25,6 +27,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.nav.cases);
+}
+
 /** Narrows a raw query string value to a known enum member, or "all". */
 function pick<T extends string>(value: string | undefined, allowed: readonly T[]): T | "all" {
   return value && (allowed as readonly string[]).includes(value) ? (value as T) : "all";
@@ -37,10 +43,9 @@ export default async function CasesPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const viewerLocale = profile?.locale || locale;
+  const viewerLocale = locale;
   const dict = await getDictionary(viewerLocale);
 
   const sp = await searchParams;

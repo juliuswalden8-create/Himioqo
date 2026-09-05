@@ -7,6 +7,7 @@ import { FormField, NativeCheckbox, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import {
   assignPlaceAction,
@@ -46,6 +47,19 @@ import { pickText } from "@/lib/places";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
+  const session = await getSession();
+  const property = session ? getProperty(session.organizationId, id) : undefined;
+  return { title: property?.name ?? dict.homes.title };
+}
+
 export default async function PropertyAdminPage({
   params,
   searchParams,
@@ -62,7 +76,7 @@ export default async function PropertyAdminPage({
   const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const dict = await getDictionary(profile?.locale || locale);
+  const dict = await getDictionary(locale);
   const guide = getPropertyGuide(property.id);
   const assigned = listAssignedPlaces(property.id);
   const partners = listPlaces(session.organizationId);

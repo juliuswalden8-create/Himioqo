@@ -7,7 +7,7 @@ export function generateMetadata(): Promise<Metadata> {
   return pageMetadata((dict) => dict.errors.notFoundTitle);
 }
 
-export default async function NotFound() {
+export default async function GuestNotFound() {
   const locale = await getLocale();
   const dict = await getDictionary(locale);
   return <NotFoundState dict={dict} locale={locale} />;

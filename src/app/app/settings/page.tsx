@@ -8,7 +8,9 @@ import { SettingsLanguage } from "@/components/settings-language";
 import { Button } from "@/components/ui/button";
 import { FormField, NativeCheckbox } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { updateNotificationSettingsAction, updateSettingsAction } from "@/lib/actions";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 import {
@@ -23,6 +25,10 @@ import { requireHostSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.settings.title);
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -32,7 +38,7 @@ export default async function SettingsPage({
   const profile = getProfile(session.profileId);
   const org = getOrganization(session.organizationId);
   const locale = await getLocale();
-  const dict = await getDictionary(profile?.locale || locale);
+  const dict = await getDictionary(locale);
   const sp = await searchParams;
   const saved = (Array.isArray(sp.saved) ? sp.saved[0] : sp.saved) === "1";
   const days = trialDaysLeft(session.organizationId);

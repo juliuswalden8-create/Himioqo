@@ -173,7 +173,7 @@ describe("property management", () => {
   });
 
   it("supports search and filtering", () => {
-    expect(listProperties(ORG, { query: "solsidan" })).toHaveLength(1);
+    expect(listProperties(ORG, { query: "villa sol" })).toHaveLength(1);
     expect(listProperties(ORG, { query: "zzzz" })).toHaveLength(0);
     const stockholm = listProperties(ORG, { city: "Stockholm" });
     expect(stockholm.every((p) => p.city === "Stockholm")).toBe(true);
@@ -182,7 +182,7 @@ describe("property management", () => {
 
 describe("guest reporting", () => {
   it("turns a guest report into a case visible on the dashboard", () => {
-    const property = listProperties(ORG).find((p) => p.name === "Villa Solsidan");
+    const property = listProperties(ORG).find((p) => p.name === "Villa Sol");
     expect(property).toBeDefined();
 
     const before = getDashboardStats(ORG);
@@ -405,7 +405,7 @@ describe("cleaning workflow", () => {
 
 describe("owner access", () => {
   function access() {
-    const property = listProperties(ORG).find((p) => p.name === "Villa Solsidan")!;
+    const property = listProperties(ORG).find((p) => p.name === "Villa Sol")!;
     return createOwnerAccess({
       organizationId: ORG,
       propertyId: property.id,
@@ -417,14 +417,14 @@ describe("owner access", () => {
   it("exposes only the linked property", () => {
     const created = access();
     const view = getOwnerView(created.token)!;
-    expect(view.property.name).toBe("Villa Solsidan");
+    expect(view.property.name).toBe("Villa Sol");
     expect(view.property).not.toHaveProperty("tenantEmail");
     expect(view.property).not.toHaveProperty("notes");
     expect(view.property).not.toHaveProperty("reportToken");
   });
 
   it("hides internal notes and work photos until the manager approves", () => {
-    const property = listProperties(ORG).find((p) => p.name === "Villa Solsidan")!;
+    const property = listProperties(ORG).find((p) => p.name === "Villa Sol")!;
     const item = listCases(ORG).find((c) => c.propertyId === property.id)!;
     const contractor = listContractors(ORG)[0]!;
 
@@ -669,7 +669,7 @@ describe("manager dashboard helpers", () => {
   });
 
   it("counts QR scans and reports for the last 30 days", () => {
-    const home = listProperties(ORG).find((p) => p.name === "Villa Solsidan");
+    const home = listProperties(ORG).find((p) => p.name === "Villa Sol");
     expect(home).toBeDefined();
     const traffic = getPropertyTraffic(ORG, home!.id);
     expect(traffic.scans).toBeGreaterThan(0);
