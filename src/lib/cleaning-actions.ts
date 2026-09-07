@@ -76,9 +76,11 @@ export async function createCleaningJobAction(formData: FormData) {
 
 export async function addCleanerAction(formData: FormData) {
   const session = await requireHostSession();
+  const next = String(formData.get("next") ?? "/app/settings#users");
+  const dest = next.startsWith("/app/") ? next : "/app/settings#users";
   const name = String(formData.get("name") ?? "").trim();
   const contactName = String(formData.get("contactName") ?? "").trim();
-  if (!name || !contactName) redirect("/app/cleaning");
+  if (!name || !contactName) redirect(dest);
   addCleaner(session.organizationId, {
     name,
     contactName,
@@ -86,7 +88,7 @@ export async function addCleanerAction(formData: FormData) {
     email: String(formData.get("email") ?? "").trim(),
   });
   revalidateCleaning();
-  redirect("/app/cleaning");
+  redirect(dest);
 }
 
 export async function saveScheduleAction(formData: FormData) {

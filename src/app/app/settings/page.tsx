@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { pageMetadata } from "@/lib/page-metadata";
 import { updateNotificationSettingsAction, updateSettingsAction } from "@/lib/actions";
+import { addCleanerAction } from "@/lib/cleaning-actions";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 import {
   getOrganization,
@@ -122,6 +123,29 @@ export default async function SettingsPage({
             properties={properties.map((item) => ({ id: item.id, name: item.name }))}
             invitations={invitations}
           />
+          <form
+            action={addCleanerAction}
+            className="space-y-4 rounded-xl border border-border px-3 py-4"
+          >
+            <h3 className="text-sm font-semibold text-navy-800">{dict.cleaning.addCleaner}</h3>
+            <p className="text-sm text-muted-foreground">{dict.settings.addCleanerHelp}</p>
+            <input type="hidden" name="next" value="/app/settings#users" />
+            <FormField label={dict.cleaning.cleanerName} htmlFor="cleaner-name" required>
+              <Input id="cleaner-name" name="name" required />
+            </FormField>
+            <FormField label={dict.cleaning.contact} htmlFor="cleaner-contact" required>
+              <Input id="cleaner-contact" name="contactName" required />
+            </FormField>
+            <FormField label={dict.contractorForm.phone} htmlFor="cleaner-phone">
+              <Input id="cleaner-phone" name="phone" />
+            </FormField>
+            <FormField label={dict.contractorForm.email} htmlFor="cleaner-email">
+              <Input id="cleaner-email" name="email" type="email" />
+            </FormField>
+            <Button type="submit" variant="secondary">
+              {dict.cleaning.addCleaner}
+            </Button>
+          </form>
         </section>
 
         <section className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-soft">

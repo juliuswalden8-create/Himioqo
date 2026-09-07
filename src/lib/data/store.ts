@@ -7,6 +7,12 @@
  * live here until a dedicated database pass.
  */
 import { format, parseISO, startOfMonth, subMonths } from "date-fns";
+import {
+  caseAttentionRank,
+  caseIsOpen,
+  caseIsOverdue,
+  cleaningBucket,
+} from "@/lib/ops-attention";
 import { sv } from "date-fns/locale";
 import {
   activity as seedActivity,
@@ -963,11 +969,13 @@ export function listCases(
     const q = filters.query.toLowerCase();
     items = items.filter((c) => {
       const property = store.properties.find((p) => p.id === c.propertyId);
+      const contractor = store.contractors.find((item) => item.id === c.contractorId);
       return (
         c.reference.toLowerCase().includes(q) ||
         c.title.toLowerCase().includes(q) ||
         c.reporterName.toLowerCase().includes(q) ||
-        property?.name.toLowerCase().includes(q)
+        property?.name.toLowerCase().includes(q) ||
+        (contractor?.name ?? "").toLowerCase().includes(q)
       );
     });
   }
@@ -989,9 +997,11 @@ export function listCases(
       if (sort === "priority") {
         const diff = priorityRank[a.priority] - priorityRank[b.priority];
         if (diff) return diff;
-      }
-      if (sort === "status") {
+      } else if (sort === "status") {
         const diff = statusRank[a.status] - statusRank[b.status];
+        if (diff) return diff;
+      } else {
+        const diff = caseAttentionRank(a) - caseAttentionRank(b);
         if (diff) return diff;
       }
       return b.createdAt.localeCompare(a.createdAt);
@@ -1058,24 +1068,31 @@ export function getUsageMetrics(organizationId: string): UsageMetrics {
   const properties = listProperties(organizationId);
   const cases = listCases(organizationId);
   const org = getOrganization(organizationId);
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const closed = cases.filter(
-    (item) => CLOSED_STATUSES.includes(item.status) && item.completedAt,
+    (item) =>
+      CLOSED_STATUSES.includes(item.status) &&
+      item.completedAt &&
+      item.completedAt >= since,
   );
   const hours = closed.map(
     (item) => (Date.parse(item.completedAt!) - Date.parse(item.createdAt)) / 3_600_000,
   );
   const avg = hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null;
-  const events = store.guideEvents.filter((item) => item.organizationId === organizationId);
+  const events = store.guideEvents.filter(
+    (item) => item.organizationId === organizationId && item.createdAt >= since,
+  );
   const cleanings = store.cleaningJobs.filter(
     (job) =>
       job.organizationId === organizationId &&
-      (job.status === "completed" || job.status === "approved"),
+      (job.status === "completed" || job.status === "approved") &&
+      (job.completedAt ?? job.updatedAt) >= since,
   );
   const wifiCopies = events.filter((item) => item.kind === "click_wifi").length;
   const scans = events.filter((item) => item.kind === "scan").length;
   return {
     scans,
-    reports: cases.length,
+    reports: cases.filter((item) => item.createdAt >= since).length,
     avgResolutionHours: avg === null ? null : Math.round(avg * 10) / 10,
     cleaningsCompleted: cleanings.length,
     handledCases: closed.length,
@@ -1093,6 +1110,34 @@ export function getAttentionProperties(organizationId: string) {
   return listProperties(organizationId)
     .filter((p) => p.health !== "good")
     .sort((a, b) => b.urgentCaseCount - a.urgentCaseCount || b.openCaseCount - a.openCaseCount);
+}
+
+export function getHostAttention(organizationId: string) {
+  const properties = listProperties(organizationId);
+  const cases = listCases(organizationId);
+  const jobs = listCleaningJobs(organizationId);
+  const open = cases.filter((item) => caseIsOpen(item.status));
+  const urgent = open.filter((item) => item.priority === "urgent");
+  const unassigned = open.filter((item) => !item.contractorId);
+  const overdueCases = open.filter((item) => caseIsOverdue(item));
+  const notReady = properties.filter((property) => !property.guestReady);
+  const needsAction = properties.filter(
+    (property) => property.health !== "good" || !property.guestReady,
+  );
+  const todayJobs = jobs.filter((job) => cleaningBucket(job) === "today");
+  const overdueJobs = jobs.filter((job) => cleaningBucket(job) === "overdue");
+  return {
+    urgent,
+    unassigned,
+    overdueCases,
+    notReady,
+    needsAction,
+    todayJobs,
+    overdueJobs,
+    recent: [...cases]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 5),
+  };
 }
 
 export function getMonthSeries(organizationId: string): MonthDatum[] {

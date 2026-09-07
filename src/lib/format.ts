@@ -41,6 +41,13 @@ export function formatRelative(value: string, locale?: string) {
   });
 }
 
+export function formatOpenDuration(value: string, locale?: string) {
+  return formatDistanceToNow(parseISO(value), {
+    addSuffix: false,
+    locale: dateLocale(locale),
+  });
+}
+
 export function formatMonthLabel(isoMonth: string, locale?: string) {
   const date = parseISO(`${isoMonth}-01`);
   const loc = dateLocale(locale);

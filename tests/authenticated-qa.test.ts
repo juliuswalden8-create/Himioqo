@@ -16,6 +16,7 @@ import {
   createManagerCase,
   getCase,
   getGuestGuide,
+  getHostAttention,
   getMembership,
   listCases,
   listCasesForMembership,
@@ -121,6 +122,17 @@ describe("copy and locale", () => {
     expect(leftoverEnglish(en, es)).toEqual([]);
     expect(leftoverEnglish(marketingEn, marketingEs)).toEqual([]);
   });
+
+  it("drops invented-savings copy and labels the usage period", () => {
+    expect(sv.dashboard.usageHelp).toBe("Senaste 30 dagarna");
+    expect(es.dashboard.usageHelp).toBe("Últimos 30 días");
+    expect(sv.dashboard.usageHelp).not.toMatch(/abonnemang kopplas/i);
+    expect(sv.dashboard.usageSelfServeHelp).toBe("");
+    expect(sv.filters.sortDate).toBe("Nyast först");
+    expect(es.filters.sortDate).toBe("Más recientes");
+    expect(sv.dashboard.attention).toBe("Behöver din uppmärksamhet");
+    expect(es.dashboard.attention).toBe("Necesita tu atención");
+  });
 });
 
 describe("demo logins and roles", () => {
@@ -207,6 +219,31 @@ describe("case workflow", () => {
 
     approveCase(ORG, created.id, "Anna Bergström");
     expect(getCase(ORG, created.id)?.status).toBe("approved");
+  });
+});
+
+describe("host attention hierarchy", () => {
+  it("finds cases by assignee and puts urgent open work first", () => {
+    const assigned = listCases(ORG).find((item) => item.contractor?.name);
+    expect(assigned?.contractor?.name).toBeTruthy();
+    const byAssignee = listCases(ORG, { query: assigned!.contractor!.name });
+    expect(byAssignee.some((item) => item.id === assigned!.id)).toBe(true);
+
+    const sorted = listCases(ORG);
+    const firstOpenUrgent = sorted.find(
+      (item) => item.priority === "urgent" && ["new", "reviewing", "assigned", "accepted", "in_progress", "waiting"].includes(item.status),
+    );
+    if (firstOpenUrgent) {
+      expect(sorted[0]?.priority).toBe("urgent");
+    }
+  });
+
+  it("summarises homes, urgent cases, unassigned work and today’s cleanings", () => {
+    const attention = getHostAttention(ORG);
+    expect(attention.needsAction.length).toBeGreaterThan(0);
+    expect(attention.urgent.length).toBeGreaterThan(0);
+    expect(attention.unassigned.length).toBeGreaterThan(0);
+    expect(attention.recent.length).toBeGreaterThan(0);
   });
 });
 

@@ -4,6 +4,7 @@ import { AppListRow } from "@/components/app-list-row";
 import { ReadyBadge } from "@/components/cleaning-status";
 import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
+import { PropertyRowMenu } from "@/components/property-row-menu";
 import { HealthBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { FormField, NativeSelect } from "@/components/ui/field";
@@ -18,10 +19,12 @@ import { SUPPORT_EMAIL } from "@/lib/constants";
 import {
   canAddProperty,
   getOrganization,
+  getPropertyGuide,
   getPropertyTraffic,
   listProperties,
   propertyFilterOptions,
 } from "@/lib/data/store";
+import { formatDate } from "@/lib/format";
 import { healthLabel, propertyTypeLabel } from "@/lib/labels";
 import { requireHostSession } from "@/lib/session";
 import { PROPERTY_HEALTH, PROPERTY_TYPES, type PropertyHealth } from "@/lib/types";
@@ -120,10 +123,18 @@ export default async function PropertiesPage({
             <ul>
               {properties.map((property) => {
                 const traffic = getPropertyTraffic(session.organizationId, property.id);
+                const guide = getPropertyGuide(property.id);
+                const nextCheckIn = property.nextCheckoutAt
+                  ? interpolate(dict.homes.nextCheckIn, {
+                      when: `${formatDate(property.nextCheckoutAt, locale)}${guide?.checkIn ? ` · ${guide.checkIn}` : ""}`,
+                    })
+                  : dict.homes.nextCheckInNone;
                 return (
                   <AppListRow
                     key={property.id}
                     href={`/app/properties/${property.id}`}
+                    fullRow
+                    rowLabel={property.name}
                     badges={
                       <div className="flex flex-col items-end gap-1.5">
                         <div className="flex flex-col items-end gap-0.5">
@@ -146,36 +157,32 @@ export default async function PropertiesPage({
                     }
                     actions={
                       <>
-                        <Button asChild size="sm" variant="secondary">
+                        <Button asChild size="sm">
                           <Link href={`/app/properties/${property.id}`}>{dict.homes.openHome}</Link>
                         </Button>
-                        <Button asChild size="sm" variant="cta">
-                          <Link href={`/app/properties/${property.id}?tab=qr`}>{dict.dashboard.showQr}</Link>
-                        </Button>
-                        <Button asChild size="sm" variant="secondary">
-                          <Link href={`/app/properties/${property.id}?tab=info`}>
-                            {dict.homes.editGuide}
-                          </Link>
-                        </Button>
-                        <Button asChild size="sm" variant="secondary">
-                          <Link href={`/app/cases/new?propertyId=${property.id}`}>
-                            {dict.homes.createCase}
-                          </Link>
-                        </Button>
+                        <PropertyRowMenu
+                          label={dict.homes.moreActions}
+                          qrLabel={dict.dashboard.showQr}
+                          qrHref={`/app/properties/${property.id}?tab=qr`}
+                          guideLabel={dict.homes.editGuide}
+                          guideHref={`/app/properties/${property.id}?tab=info`}
+                          caseLabel={dict.homes.createCase}
+                          caseHref={`/app/cases/new?propertyId=${property.id}`}
+                        />
                       </>
                     }
                   >
                     <p className="truncate text-sm font-medium text-navy-800">{property.name}</p>
+                    <p className="text-xs text-muted-foreground">{nextCheckIn}</p>
                     <p className="text-xs text-muted-foreground">
-                      {property.city} ·{" "}
-                      {interpolate(dict.homes.scans30, { count: String(traffic.scans) })}
+                      {interpolate(dict.homes.openCasesCount, {
+                        count: String(property.openCaseCount),
+                      })}
+                      {" · "}
+                      {property.city}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {interpolate(dict.homes.trafficHelp, {
-                        opens: String(traffic.guideOpens),
-                        reports: String(traffic.reports),
-                        contacts: String(traffic.contactClicks),
-                      })}
+                      {interpolate(dict.homes.scans30, { count: String(traffic.scans) })}
                     </p>
                   </AppListRow>
                 );

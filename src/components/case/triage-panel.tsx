@@ -140,7 +140,8 @@ export function TriagePanel({
       </form>
 
       <form
-        className="space-y-5 border-t border-border pt-4"
+        id="assign"
+        className="scroll-mt-24 space-y-5 border-t border-border pt-4"
         action={(data) => {
           data.set("caseId", caseId);
           start(async () => {
