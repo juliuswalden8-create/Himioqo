@@ -298,7 +298,7 @@ export default async function OverviewPage() {
                     const completed = job.completedAt
                       ? isToday(parseISO(job.completedAt))
                         ? interpolate(dict.cleaning.completedAt, {
-                            time: `idag ${formatTime(job.completedAt)}`,
+                            time: `${dict.cleaning.today.toLowerCase()} ${formatTime(job.completedAt)}`,
                           })
                         : interpolate(dict.cleaning.completedAt, { time: formatTime(job.completedAt) })
                       : null;

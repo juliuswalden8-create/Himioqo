@@ -1151,10 +1151,10 @@ export const marketingEs: MarketingCopy = {
       },
       {
         id: "clubs",
-        title: "Beach clubs",
+        title: "Clubes de playa",
         distance: "8 min en coche",
         description: "Tumbonas, música suave y el mar de fondo.",
-        alt: "Beach club en Marbella con tumbonas frente al mar",
+        alt: "Club de playa en Marbella con tumbonas frente al mar",
       },
       {
         id: "beaches",

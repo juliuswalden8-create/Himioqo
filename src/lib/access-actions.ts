@@ -282,7 +282,13 @@ export async function loginWithIntentAction(
   const intent = asIntent(String(formData.get("intent") ?? "host")) ?? "host";
   const nextRaw = String(formData.get("next") ?? "");
   const ip = await requestIp();
-  if (!rateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS).ok) {
+  if (
+    !rateLimit(
+      `login:${ip}`,
+      process.env.NODE_ENV === "production" ? LOGIN_LIMIT : LOGIN_LIMIT * 10,
+      LOGIN_WINDOW_MS,
+    ).ok
+  ) {
     logSecurityEvent("rate_limited", { subject: "login" });
     return { error: "login" };
   }

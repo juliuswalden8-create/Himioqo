@@ -8,7 +8,9 @@ import {
 } from "@/components/cleaning/cleaner-controls";
 import { CleaningStatusBadge } from "@/components/cleaning-status";
 import { StaffHeader } from "@/components/staff-header";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 import { interpolate } from "@/i18n/interpolate";
 import { toggleCheckAction } from "@/lib/cleaning-actions";
 import { cleanerMayAccessJob, getCleaningJob } from "@/lib/data/store";
@@ -16,6 +18,10 @@ import { formatDateTime } from "@/lib/format";
 import { requireRoleSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.access.cleanerHome);
+}
 
 export default async function CleanerJobPage({
   params,
