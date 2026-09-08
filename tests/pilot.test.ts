@@ -1,19 +1,21 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { canManageOrg } from "@/lib/access/permissions";
 import {
-  DEMO_PASSWORD,
   FOUNDER_EMAIL,
   PRICE_MONTHLY_EUR,
   PRICE_SETUP_EUR,
   QR_SIGN_PRICE_EUR,
-  TEST_CLEANER_EMAIL,
-  TEST_CONTRACTOR_EMAIL,
-  TEST_OTHER_HOST_EMAIL,
-  TEST_OWNER_EMAIL,
   TRIAL_DAYS,
   TRIAL_PROPERTY_LIMIT,
   founderInbox,
 } from "@/lib/constants";
+import {
+  SEED_CLEANER_EMAIL,
+  SEED_CONTRACTOR_EMAIL,
+  SEED_FIXTURE_PASSWORD,
+  SEED_OTHER_HOST_EMAIL,
+  SEED_OWNER_EMAIL,
+} from "@/lib/data/seed";
 import {
   authenticate,
   canAddProperty,
@@ -35,7 +37,7 @@ import {
   resetStore,
   savePayPerHomeMonth,
   setCaseWorkOrder,
-  submitReport,
+  createManagerCase,
   updateOrganization,
 } from "@/lib/data/store";
 import { sv } from "@/i18n/messages";
@@ -69,28 +71,24 @@ beforeEach(() => {
 
 describe("dedicated test accounts", () => {
   it("lets host, cleaner, contractor, owner and the other-org host sign in", () => {
-    expect(authenticate("anna@homioqo.se", DEMO_PASSWORD)?.id).toBe("profile_anna");
-    expect(authenticate(TEST_CLEANER_EMAIL, DEMO_PASSWORD)?.id).toBe("profile_maria");
-    expect(authenticate(TEST_CONTRACTOR_EMAIL, DEMO_PASSWORD)?.id).toBe("profile_omar");
-    expect(authenticate(TEST_OWNER_EMAIL, DEMO_PASSWORD)?.id).toBe("profile_lina");
-    expect(authenticate(TEST_OTHER_HOST_EMAIL, DEMO_PASSWORD)?.organizationId).toBe(OTHER);
+    expect(authenticate("anna@homioqo.se", SEED_FIXTURE_PASSWORD)?.id).toBe("profile_anna");
+    expect(authenticate(SEED_CLEANER_EMAIL, SEED_FIXTURE_PASSWORD)?.id).toBe("profile_maria");
+    expect(authenticate(SEED_CONTRACTOR_EMAIL, SEED_FIXTURE_PASSWORD)?.id).toBe("profile_omar");
+    expect(authenticate(SEED_OWNER_EMAIL, SEED_FIXTURE_PASSWORD)?.id).toBe("profile_lina");
+    expect(authenticate(SEED_OTHER_HOST_EMAIL, SEED_FIXTURE_PASSWORD)?.organizationId).toBe(OTHER);
   });
 });
 
 describe("guest report to contractor complete", () => {
   it("lets the host assign the seeded contractor, who then uploads an after photo and finishes", () => {
-    const created = submitReport({
-      propertyToken: "qr_solsidan",
+    const created = createManagerCase({
+      organizationId: ORG,
+      propertyId: "prop_solsidan",
       category: "lock",
       priority: "soon",
       title: "Dörren kärvar igen",
       description: "Nyckeln tar inte i låset efter regn.",
-      discoveredAt: new Date().toISOString(),
-      stillOngoing: true,
       reporterName: "Gäst",
-      reporterPhone: "",
-      reporterEmail: "",
-      photos: [{ url: "data:image/png;base64,AAAA", caption: "Lås" }],
     });
 
     expect(listCases(ORG).some((item) => item.id === created.id)).toBe(true);

@@ -31,12 +31,12 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). Use `npm run dev -- -p 3002`
 to pick another port.
 
-## Demo account
+## Public demo
 
-- Email: `anna@homioqo.se`
-- Password: `demo1234`
+The logged-in portal has no demo account. Create a real workspace from `/register`.
 
-Or press **Öppna demokontot** on the login page.
+The public Villa Sol guest guide at `/g/qr_solsidan` is an isolated marketing demo.
+It does not log anyone in and does not create customer data.
 
 ## Environment variables
 
@@ -47,7 +47,7 @@ optional; unset integrations fall back to safe local behaviour.
 | --- | --- | --- |
 | `SESSION_SECRET` | In production | Signs the session cookie. Without it, production refuses to start. In development a random per-process key is used, so sessions drop on restart. Generate with `openssl rand -base64 32` |
 | `NEXT_PUBLIC_APP_URL` | No | Base URL used when building QR and share links |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | No | Real database, auth and storage. Unset means the in-memory demo dataset |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | No | Real database, auth and storage. Unset means the in-memory store. Customer workspaces start empty. |
 | `RESEND_API_KEY`, `RESEND_FROM` | No | Sends transactional email. Unset means emails are logged, never sent |
 | `DEEPL_API_KEY` | No | Live message translation. Unset means the original text is shown and marked as untranslated |
 

@@ -8,13 +8,15 @@ import {
 } from "@/components/landing/links";
 import { en, es, sv } from "@/i18n/messages";
 import {
-  DEMO_EMAIL,
-  DEMO_PASSWORD,
   FOUNDER_EMAIL,
   PRICE_MONTHLY_EUR,
   PRICE_SETUP_EUR,
-  TEST_OTHER_HOST_EMAIL,
 } from "@/lib/constants";
+import {
+  SEED_FIXTURE_PASSWORD,
+  SEED_HOST_EMAIL,
+  SEED_OTHER_HOST_EMAIL,
+} from "@/lib/data/seed";
 import {
   authenticate,
   consumePasswordResetToken,
@@ -244,18 +246,18 @@ describe("registration and accounts", () => {
   });
 
   it("issues a one-use password reset token", () => {
-    const anna = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
+    const anna = authenticate(SEED_HOST_EMAIL, SEED_FIXTURE_PASSWORD);
     expect(anna).toBeTruthy();
     createPasswordResetToken(anna!.id, "reset-test-token");
     expect(peekPasswordResetToken("reset-test-token")?.id).toBe(anna!.id);
     expect(consumePasswordResetToken("reset-test-token")?.id).toBe(anna!.id);
     expect(consumePasswordResetToken("reset-test-token")).toBeNull();
-    expect(authenticate(DEMO_EMAIL, "fel")).toBeNull();
+    expect(authenticate(SEED_HOST_EMAIL, "fel")).toBeNull();
   });
 
   it("keeps the demo host signed in after a store-backed password check", () => {
-    const first = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
-    const again = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
+    const first = authenticate(SEED_HOST_EMAIL, SEED_FIXTURE_PASSWORD);
+    const again = authenticate(SEED_HOST_EMAIL, SEED_FIXTURE_PASSWORD);
     expect(first?.id).toBe("profile_anna");
     expect(again?.id).toBe(first?.id);
   });
@@ -306,19 +308,21 @@ describe("homes and guest guide", () => {
   it("keeps two organisations isolated and rejects missing or revoked QR tokens", () => {
     expect(getPropertyByToken("finns-inte")).toBeUndefined();
     expect(getGuestGuide("finns-inte")).toBeUndefined();
-    const home = listProperties(ORG).find((item) => item.reportToken === "qr_solsidan")!;
+    const home = listProperties(ORG).find((item) => item.reportToken === "qr_strand14")!;
     revokeGuestLink(ORG, home.id);
+    expect(getPropertyByToken("qr_strand14")).toBeUndefined();
+    expect(getGuestGuide("qr_strand14")).toBeUndefined();
     expect(getPropertyByToken("qr_solsidan")).toBeUndefined();
-    expect(getGuestGuide("qr_solsidan")).toBeUndefined();
+    expect(getGuestGuide("qr_solsidan")?.property.name).toBe("Villa Sol");
     expect(listProperties(ORG).some((item) => item.organizationId === OTHER)).toBe(false);
-    expect(authenticate(TEST_OTHER_HOST_EMAIL, DEMO_PASSWORD)?.organizationId).toBe(OTHER);
+    expect(authenticate(SEED_OTHER_HOST_EMAIL, SEED_FIXTURE_PASSWORD)?.organizationId).toBe(OTHER);
   });
 });
 
 describe("issues and uploads", () => {
   it("creates a report with a valid photo and rejects a spoofed type", () => {
     const created = submitReport({
-      propertyToken: "qr_solsidan",
+      propertyToken: "qr_strand14",
       category: "other",
       priority: "soon",
       title: "Testfel",

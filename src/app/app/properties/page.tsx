@@ -4,6 +4,8 @@ import { AppListRow } from "@/components/app-list-row";
 import { ReadyBadge } from "@/components/cleaning-status";
 import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
+import { ProgressRing } from "@/components/progress-ring";
+import { AppFormDialog } from "@/components/create-cleaning-dialog";
 import { PropertyRowMenu } from "@/components/property-row-menu";
 import { HealthBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -21,10 +23,12 @@ import {
   getOrganization,
   getPropertyGuide,
   getPropertyTraffic,
+  getResultMetrics,
   listProperties,
   propertyFilterOptions,
 } from "@/lib/data/store";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatRelative } from "@/lib/format";
+import { ratioTone } from "@/lib/ops-metrics";
 import { healthLabel, propertyTypeLabel } from "@/lib/labels";
 import { requireHostSession } from "@/lib/session";
 import { PROPERTY_HEALTH, PROPERTY_TYPES, type PropertyHealth } from "@/lib/types";
@@ -62,6 +66,7 @@ export default async function PropertiesPage({
     city,
     health,
   });
+  const results = getResultMetrics(session.organizationId);
   const hasFilters = Boolean(query) || city !== "all" || health !== "all";
   const allOption = { value: "all", label: dict.filters.all };
   const atLimit = !canAddProperty(session.organizationId);
@@ -78,12 +83,67 @@ export default async function PropertiesPage({
           })}
           actions={
             atLimit ? null : (
-              <Button asChild variant="cta">
-                <a href="#create">{dict.homes.addHome}</a>
-              </Button>
+              <AppFormDialog title={dict.homes.newHome} trigger={dict.homes.addHome}>
+                <form action={createPropertyAction} className="space-y-5">
+                  <FormField label={dict.propertyForm.name} htmlFor="name" required>
+                    <Input id="name" name="name" required />
+                  </FormField>
+                  <FormField label={dict.propertyForm.address} htmlFor="address" required>
+                    <Input id="address" name="address" required />
+                  </FormField>
+                  <FormField label={dict.propertyForm.city} htmlFor="city" required>
+                    <Input id="city" name="city" required />
+                  </FormField>
+                  <FormField label={dict.propertyForm.type} htmlFor="type">
+                    <NativeSelect id="type" name="type" defaultValue="apartment">
+                      {PROPERTY_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {propertyTypeLabel(dict, type)}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </FormField>
+                  <FormField
+                    label={dict.propertyForm.tenant}
+                    htmlFor="tenantName"
+                    hint={dict.propertyForm.tenantHelp}
+                  >
+                    <Input
+                      id="tenantName"
+                      name="tenantName"
+                      placeholder={dict.propertyForm.tenantDefault}
+                    />
+                  </FormField>
+                  <FormField
+                    label={dict.propertyForm.notes}
+                    htmlFor="notes"
+                    hint={dict.propertyForm.notesHelp}
+                  >
+                    <Textarea id="notes" name="notes" />
+                  </FormField>
+                  <Button type="submit" variant="cta" className="min-h-11 w-full">
+                    {dict.homes.addHome}
+                  </Button>
+                </form>
+              </AppFormDialog>
             )
           }
         />
+
+        <div className="flex justify-start">
+          <ProgressRing
+            href="/app/properties"
+            percent={results.homesReady.percent}
+            label={dict.dashboard.ringHomes}
+            countLabel={interpolate(dict.homes.homesReadyRing, {
+              ready: String(results.homesReady.completed),
+              total: String(results.homesReady.total),
+            })}
+            emptyLabel={dict.dashboard.ringNoHomes}
+            tone={ratioTone(results.homesReady.percent)}
+            size={112}
+          />
+        </div>
 
         <FilterBar
           action="/app/properties"
@@ -168,18 +228,29 @@ export default async function PropertiesPage({
                           guideHref={`/app/properties/${property.id}?tab=info`}
                           caseLabel={dict.homes.createCase}
                           caseHref={`/app/cases/new?propertyId=${property.id}`}
+                          settingsLabel={dict.homes.homeSettings}
+                          settingsHref={`/app/properties/${property.id}?tab=info`}
                         />
                       </>
                     }
                   >
                     <p className="truncate text-sm font-medium text-navy-800">{property.name}</p>
                     <p className="text-xs text-muted-foreground">{nextCheckIn}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-navy-600">
                       {interpolate(dict.homes.openCasesCount, {
                         count: String(property.openCaseCount),
                       })}
                       {" · "}
+                      {interpolate(dict.homes.urgentCasesCount, {
+                        count: String(property.urgentCaseCount),
+                      })}
+                      {" · "}
                       {property.city}
+                    </p>
+                    <p className="text-xs text-navy-600">
+                      {interpolate(dict.homes.lastActivityWhen, {
+                        when: formatRelative(property.updatedAt, locale),
+                      })}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {interpolate(dict.homes.scans30, { count: String(traffic.scans) })}
@@ -194,66 +265,22 @@ export default async function PropertiesPage({
             </p>
           )}
         </section>
-        <section
-          id="create"
-          className="scroll-mt-24 rounded-2xl border border-border bg-white p-5 shadow-soft"
-        >
-          <h2 className="text-sm font-semibold text-navy-800">{dict.homes.newHome}</h2>
-          {limitHit ? (
-            <div className="mt-4 space-y-3">
-              <p className="text-sm font-medium text-navy-800">{dict.homes.limitTitle}</p>
-              <p className="text-sm text-muted-foreground">{dict.homes.limitHelp}</p>
-              <Button asChild variant="cta">
-                <a href={`mailto:${SUPPORT_EMAIL}`}>{dict.homes.limitCta}</a>
-              </Button>
-            </div>
-          ) : (
-          <form action={createPropertyAction} className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
-            <FormField label={dict.propertyForm.name} htmlFor="name" required className="sm:col-span-2">
-              <Input id="name" name="name" required />
-            </FormField>
-            <FormField label={dict.propertyForm.address} htmlFor="address" required>
-              <Input id="address" name="address" required />
-            </FormField>
-            <FormField label={dict.propertyForm.city} htmlFor="city" required>
-              <Input id="city" name="city" required />
-            </FormField>
-            <FormField label={dict.propertyForm.type} htmlFor="type">
-              <NativeSelect id="type" name="type" defaultValue="apartment">
-                {PROPERTY_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {propertyTypeLabel(dict, type)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </FormField>
-            <FormField
-              label={dict.propertyForm.tenant}
-              htmlFor="tenantName"
-              hint={dict.propertyForm.tenantHelp}
-            >
-              <Input
-                id="tenantName"
-                name="tenantName"
-                placeholder={dict.propertyForm.tenantDefault}
-              />
-            </FormField>
-            <FormField
-              label={dict.propertyForm.notes}
-              htmlFor="notes"
-              hint={dict.propertyForm.notesHelp}
-              className="sm:col-span-2"
-            >
-              <Textarea id="notes" name="notes" />
-            </FormField>
-            <div className="sm:col-span-2">
-              <Button type="submit" variant="cta">
-                {dict.homes.addHome}
-              </Button>
-            </div>
-          </form>
-          )}
-        </section>
+        {limitHit ? (
+          <section
+            id="create"
+            className="scroll-mt-24 rounded-2xl border border-border bg-white p-5 shadow-soft"
+          >
+            <p className="text-sm font-medium text-navy-800">{dict.homes.limitTitle}</p>
+            <p className="mt-2 text-sm text-navy-600">{dict.homes.limitHelp}</p>
+            <Button asChild variant="cta" className="mt-3 min-h-11">
+              <a href={`mailto:${SUPPORT_EMAIL}`}>{dict.homes.limitCta}</a>
+            </Button>
+          </section>
+        ) : (
+          <div id="create" className="sr-only">
+            {dict.homes.addHome}
+          </div>
+        )}
       </main>
     </div>
   );

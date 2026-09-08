@@ -1,8 +1,15 @@
-import { DEMO_PASSWORD } from "@/lib/constants";
 import { hashPassword } from "@/lib/crypto";
 import { daysAgo, daysFromNow, hoursAgo, todayAt } from "@/lib/utils";
 
-const DEMO_PASSWORD_HASH = hashPassword(DEMO_PASSWORD);
+/** Test-fixture password only. Never a production or documented login. */
+export const SEED_FIXTURE_PASSWORD = "seed-fixture-only";
+export const SEED_HOST_EMAIL = "anna@homioqo.se";
+export const SEED_CLEANER_EMAIL = "maria@homioqo.se";
+export const SEED_CONTRACTOR_EMAIL = "omar@homioqo.se";
+export const SEED_OWNER_EMAIL = "lina@homioqo.se";
+export const SEED_OTHER_HOST_EMAIL = "erik@norrbo.se";
+
+const SEED_PASSWORD_HASH = hashPassword(SEED_FIXTURE_PASSWORD);
 import { DEFAULT_CHECK_KEYS } from "@/lib/cleaning";
 import type {
   ActivityLog,
@@ -57,7 +64,7 @@ export const profile: Profile = {
   marketingConsent: false,
   emailVerifiedAt: daysAgo(400),
   onboardingCompletedAt: daysAgo(399),
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: SEED_PASSWORD_HASH,
 };
 
 export const MEMBERSHIP_ID = "mem_anna_host";
@@ -68,7 +75,7 @@ export const OTHER_ORG_ID = "org_norrbo";
 export const OTHER_PROFILE_ID = "profile_erik";
 export const OTHER_PROPERTY_ID = "prop_norrbo";
 
-/** Dedicated logins for the full QR → assign → complete flow. Password is DEMO_PASSWORD. */
+/** Dedicated fixture logins for the full QR → assign → complete flow. */
 export const cleanerProfile: Profile = {
   id: CLEANER_PROFILE_ID,
   createdAt: daysAgo(180),
@@ -86,7 +93,7 @@ export const cleanerProfile: Profile = {
   marketingConsent: false,
   emailVerifiedAt: daysAgo(170),
   onboardingCompletedAt: daysAgo(170),
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: SEED_PASSWORD_HASH,
 };
 
 export const contractorProfile: Profile = {
@@ -106,7 +113,7 @@ export const contractorProfile: Profile = {
   marketingConsent: false,
   emailVerifiedAt: daysAgo(190),
   onboardingCompletedAt: daysAgo(190),
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: SEED_PASSWORD_HASH,
 };
 
 export const ownerProfile: Profile = {
@@ -126,7 +133,7 @@ export const ownerProfile: Profile = {
   marketingConsent: false,
   emailVerifiedAt: daysAgo(290),
   onboardingCompletedAt: daysAgo(290),
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: SEED_PASSWORD_HASH,
 };
 
 export const otherOrganization: Organization = {
@@ -161,7 +168,7 @@ export const otherHostProfile: Profile = {
   marketingConsent: false,
   emailVerifiedAt: daysAgo(80),
   onboardingCompletedAt: daysAgo(80),
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: SEED_PASSWORD_HASH,
 };
 
 export const profiles: Profile[] = [profile, cleanerProfile, contractorProfile, ownerProfile, otherHostProfile];

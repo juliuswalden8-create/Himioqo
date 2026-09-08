@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { Toaster } from "@/components/ui/sonner";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { NOINDEX_ROBOTS } from "@/lib/security/robots";
 import { siteOrigin } from "@/lib/utils";
 import "./globals.css";
 
@@ -27,8 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: m.description,
     metadataBase: new URL(siteOrigin()),
     applicationName: "Homioqo",
-    robots: { index: true, follow: true },
-    alternates: { canonical: "/" },
+    robots: NOINDEX_ROBOTS,
     icons: {
       icon: [
         { url: "/brand/icon-48.png", sizes: "48x48", type: "image/png" },

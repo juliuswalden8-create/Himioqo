@@ -5,14 +5,13 @@ import { redirect } from "next/navigation";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { roleHome } from "@/lib/access/roles";
 import {
-  DEMO_EMAIL,
-  DEMO_PASSWORD,
   LOGIN_LIMIT,
   LOGIN_WINDOW_MS,
   PASSWORD_RESET_TTL_HOURS,
   REPORT_LIMIT,
   REPORT_WINDOW_MS,
 } from "@/lib/constants";
+import { isPublicProductDemo } from "@/lib/public-demo";
 import { randomToken } from "@/lib/crypto";
 import { rateLimit } from "@/lib/rate-limit";
 import { logSecurityEvent } from "@/lib/security/events";
@@ -120,20 +119,6 @@ export async function loginAction(
     ?? getActiveMembership(profile.id, profile.organizationId);
   logSecurityEvent("login_ok", { subject: membership?.role ?? "host" });
   redirect(membership ? (next === "/app" ? roleHome(membership.role) : next) : roleHome("host"));
-}
-
-export async function demoLoginAction() {
-  const profile = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
-  if (!profile) redirect("/login");
-  try {
-    await setSession({
-      profileId: profile.id,
-      organizationId: profile.organizationId,
-    });
-  } catch {
-    redirect("/login");
-  }
-  redirect("/app");
 }
 
 export async function logoutAction() {
@@ -288,10 +273,15 @@ export async function submitReportAction(formData: FormData) {
   const parsed = parsePhotoPayload(formData.get("photos"));
   if (!parsed.ok) return { error: parsed.reason };
 
+  const propertyToken = String(formData.get("propertyToken") ?? "");
+  if (isPublicProductDemo(propertyToken)) {
+    redirect("/t/ok?new=1");
+  }
+
   let trackToken: string;
   try {
     const created = submitReport({
-      propertyToken: String(formData.get("propertyToken") ?? ""),
+      propertyToken,
       category,
       priority,
       title: fields.data.title,

@@ -5,12 +5,18 @@ import { sessionFromSignedCookie } from "@/lib/access/session-cookie";
 import { PUBLIC_QR_LIMIT, PUBLIC_QR_WINDOW_MS, SESSION_COOKIE } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { logSecurityEvent } from "@/lib/security/events";
+import {
+  isBareQrAliasPath,
+  robotsTagForPath,
+  rewriteBareQrPath,
+} from "@/lib/security/robots";
 import { updateSession } from "@/lib/supabase/middleware";
 
 function publicTokenPath(pathname: string) {
   return (
     pathname.startsWith("/g/") ||
     pathname.startsWith("/qr/") ||
+    isBareQrAliasPath(pathname) ||
     pathname.startsWith("/c/") ||
     pathname.startsWith("/t/") ||
     pathname.startsWith("/o/") ||
@@ -20,6 +26,18 @@ function publicTokenPath(pathname: string) {
 
 function isAppPath(pathname: string) {
   return pathname === "/app" || pathname.startsWith("/app/");
+}
+
+function copyCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie);
+  });
+}
+
+function withRobots(response: NextResponse, pathname: string) {
+  const tag = robotsTagForPath(pathname);
+  if (tag) response.headers.set("X-Robots-Tag", tag);
+  return response;
 }
 
 export async function middleware(request: NextRequest) {
@@ -35,9 +53,18 @@ export async function middleware(request: NextRequest) {
     const limited = rateLimit(`qr:${ip}`, PUBLIC_QR_LIMIT, PUBLIC_QR_WINDOW_MS);
     if (!limited.ok) {
       logSecurityEvent("rate_limited", { subject: "public-token", detail: pathname.slice(0, 24) });
-      return new NextResponse("Too Many Requests", { status: 429 });
+      return withRobots(new NextResponse("Too Many Requests", { status: 429 }), pathname);
     }
   }
+
+  if (isBareQrAliasPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = rewriteBareQrPath(pathname);
+    const rewritten = NextResponse.rewrite(url);
+    copyCookies(response, rewritten);
+    return withRobots(rewritten, pathname);
+  }
+
   const sessionCookie = request.cookies.get(SESSION_COOKIE)?.value;
   const session = sessionCookie ? sessionFromSignedCookie(sessionCookie) : null;
 
@@ -46,10 +73,8 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => {
-      redirect.cookies.set(cookie);
-    });
-    return redirect;
+    copyCookies(response, redirect);
+    return withRobots(redirect, pathname);
   }
 
   if (session && isAppPath(pathname) && !allowedPathForRole(session.role, pathname)) {
@@ -57,13 +82,11 @@ export async function middleware(request: NextRequest) {
     url.pathname = roleHome(session.role);
     url.search = "";
     const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => {
-      redirect.cookies.set(cookie);
-    });
-    return redirect;
+    copyCookies(response, redirect);
+    return withRobots(redirect, pathname);
   }
 
-  return response;
+  return withRobots(response, pathname);
 }
 
 export const config = {

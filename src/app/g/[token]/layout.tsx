@@ -5,17 +5,26 @@ import { NotFoundState } from "@/components/not-found-state";
 import { isGuestUnlocked } from "@/lib/access/guest-unlock";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getPropertyByToken } from "@/lib/data/store";
+import { isPublicProductDemo } from "@/lib/public-demo";
+import { NOINDEX_ROBOTS } from "@/lib/security/robots";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}): Promise<Metadata> {
-  const { token } = await params;
+export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const dict = await getDictionary(locale);
-  const property = getPropertyByToken(token);
-  return { title: property?.name ?? dict.errors.notFoundTitle };
+  return {
+    title: dict.guide.metaTitle,
+    description: dict.guide.noApp,
+    robots: NOINDEX_ROBOTS,
+    openGraph: {
+      title: dict.guide.metaTitle,
+      description: dict.guide.noApp,
+    },
+    twitter: {
+      card: "summary",
+      title: dict.guide.metaTitle,
+      description: dict.guide.noApp,
+    },
+  };
 }
 
 export default async function GuestTokenLayout({
@@ -26,9 +35,10 @@ export default async function GuestTokenLayout({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const property = getPropertyByToken(token);
   const locale = await getLocale();
   const dict = await getDictionary(locale);
+  if (isPublicProductDemo(token)) return children;
+  const property = getPropertyByToken(token);
   if (!property) return <NotFoundState dict={dict} locale={locale} />;
   if (property.guestPinHash && !(await isGuestUnlocked(token))) {
     return <GuestPinForm dict={dict} token={token} propertyName={property.name} />;

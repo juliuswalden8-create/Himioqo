@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 import { SiteHeader } from "@/components/site-header";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { peekPasswordResetToken } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.forgot.title);
+}
 
 export default async function ResetPasswordPage({
   params,

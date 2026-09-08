@@ -23,6 +23,7 @@ import {
   updatePropertyPlace,
 } from "@/lib/data/store";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { isPublicProductDemo } from "@/lib/public-demo";
 import { requireHostSession } from "@/lib/session";
 import type { LocalizedText, MonetizationKind, PlaceCategory } from "@/lib/types";
 
@@ -76,6 +77,7 @@ function loc(sv: string, en: string): LocalizedText {
 }
 
 export async function recordScanAction(token: string) {
+  if (isPublicProductDemo(token)) return;
   const property = getPropertyByToken(token);
   if (!property) return;
   recordGuideEvent({
@@ -97,6 +99,7 @@ export async function recordGuideClickAction(formData: FormData) {
     | "click_discount"
     | "click_phone"
     | "click_wifi";
+  if (isPublicProductDemo(token)) return;
   const property = getPropertyByToken(token);
   if (!property) return;
   recordGuideEvent({

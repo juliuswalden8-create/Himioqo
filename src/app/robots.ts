@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { REQUIRED_ROBOTS_DISALLOW } from "@/lib/security/robots";
 import { siteOrigin } from "@/lib/utils";
 
 export default function robots(): MetadataRoute.Robots {
@@ -7,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/app/", "/api/", "/onboarding", "/w/", "/c/", "/o/", "/register/check-email"],
+      disallow: [...REQUIRED_ROBOTS_DISALLOW],
     },
     sitemap: `${base}/sitemap.xml`,
     host: base,

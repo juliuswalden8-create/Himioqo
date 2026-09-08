@@ -61,6 +61,8 @@ export default async function CleaningPage() {
             <AppListRow
               key={job.id}
               href={`/app/cleaning/${job.id}`}
+              fullRow
+              rowLabel={job.property.name}
               badges={
                 <>
                   {jobDone ? null : job.property.guestReady ? (
@@ -160,9 +162,9 @@ export default async function CleaningPage() {
         {jobs.length ? (
           <div className="space-y-6">
             {[
-              { key: "overdue" as const, title: dict.cleaning.groupOverdue, items: groups.overdue },
               { key: "today" as const, title: dict.cleaning.groupToday, items: groups.today },
               { key: "upcoming" as const, title: dict.cleaning.groupUpcoming, items: groups.upcoming },
+              { key: "overdue" as const, title: dict.cleaning.groupOverdue, items: groups.overdue },
               { key: "done" as const, title: dict.cleaning.tabDone, items: groups.done },
             ]
               .filter((group) => group.items.length)

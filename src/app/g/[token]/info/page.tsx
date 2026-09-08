@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import {
@@ -16,9 +17,14 @@ import { GuestShell } from "@/components/guest/guest-shell";
 import type { Dictionary } from "@/i18n/messages";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getGuestGuide } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
 import { pickText } from "@/lib/places";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.guide.metaTitle);
+}
 
 export default async function StayInfoPage({
   params,

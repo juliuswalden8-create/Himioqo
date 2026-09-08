@@ -384,11 +384,18 @@ export interface UsageMetrics {
   cleaningsCompleted: number;
   handledCases: number;
   wifiCopies: number;
+  contactClicks: number;
   guideViews: number;
   propertiesCreated: number;
   propertiesWithWifi: number;
   trial: boolean;
   billed: boolean;
+  deltas: {
+    scans: number | null;
+    wifiCopies: number | null;
+    contactClicks: number | null;
+    reports: number | null;
+  };
 }
 
 export interface MonthDatum {
@@ -426,7 +433,7 @@ export interface InboxThread {
   unread: boolean;
 }
 
-export const CASE_SORTS = ["date", "priority", "status"] as const;
+export const CASE_SORTS = ["date", "oldest", "priority", "updated", "status"] as const;
 export type CaseSort = (typeof CASE_SORTS)[number];
 
 export interface CaseFilters {

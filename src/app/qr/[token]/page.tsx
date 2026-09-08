@@ -1,11 +1,21 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getPublicQrSign } from "@/lib/data/store";
 import { qrDataUrl } from "@/lib/qr";
 import { requestUrl } from "@/lib/request-origin";
+import { NOINDEX_ROBOTS } from "@/lib/security/robots";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(await getLocale());
+  return {
+    title: dict.qrPrint.metaTitle,
+    robots: NOINDEX_ROBOTS,
+  };
+}
 
 export default async function QrSignPage({
   params,

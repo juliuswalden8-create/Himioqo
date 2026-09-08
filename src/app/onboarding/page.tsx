@@ -8,6 +8,7 @@ import { FormField, NativeSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { NOINDEX_ROBOTS } from "@/lib/security/robots";
 import { propertyTypeLabel } from "@/lib/labels";
 import { pickText } from "@/lib/places";
 import { qrDataUrl } from "@/lib/qr";
@@ -32,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary(await getLocale());
   return {
     title: dict.onboarding.title,
-    robots: { index: false, follow: false },
+    robots: NOINDEX_ROBOTS,
   };
 }
 

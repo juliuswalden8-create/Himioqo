@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
 import { CleaningPhotoUpload } from "@/components/cleaning-photo-upload";
@@ -9,11 +10,16 @@ import {
 import { CleaningStatusBadge } from "@/components/cleaning-status";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { interpolate } from "@/i18n/interpolate";
+import { pageMetadata } from "@/lib/page-metadata";
 import { toggleCheckAction } from "@/lib/cleaning-actions";
 import { getCleaningJobByToken } from "@/lib/data/store";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.cleaning.portalTitle);
+}
 
 export default async function CleanerPortalPage({
   params,

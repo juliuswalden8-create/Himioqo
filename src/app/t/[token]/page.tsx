@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { Logo } from "@/components/brand/logo";
 import { StatusBadge } from "@/components/status-badge";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getCaseByTrackToken } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.report.thanksTitle);
+}
 
 export default async function TrackThanksPage({
   params,

@@ -25,6 +25,7 @@ export function FilterBar({
   searchValue,
   selects,
   clearLabel,
+  filterCountLabel,
   hasFilters,
   columnsClassName,
 }: {
@@ -36,6 +37,7 @@ export function FilterBar({
   selects: FilterSelect[];
   applyLabel?: string;
   clearLabel: string;
+  filterCountLabel?: string;
   hasFilters: boolean;
   columnsClassName?: string;
 }) {
@@ -102,8 +104,9 @@ export function FilterBar({
         ))}
       </div>
       {hasFilters ? (
-        <div className="mt-3">
-          <Link href={action} className="text-sm font-medium text-navy-700 underline">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {filterCountLabel ? <p className="text-sm text-navy-600">{filterCountLabel}</p> : null}
+          <Link href={action} className="min-h-11 text-sm font-medium text-navy-700 underline">
             {clearLabel}
           </Link>
         </div>

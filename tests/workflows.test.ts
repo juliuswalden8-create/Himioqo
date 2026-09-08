@@ -182,7 +182,7 @@ describe("property management", () => {
 
 describe("guest reporting", () => {
   it("turns a guest report into a case visible on the dashboard", () => {
-    const property = listProperties(ORG).find((p) => p.name === "Villa Sol");
+    const property = listProperties(ORG).find((p) => p.name === "Strandvägen 14B");
     expect(property).toBeDefined();
 
     const before = getDashboardStats(ORG);

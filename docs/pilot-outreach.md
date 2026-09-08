@@ -10,19 +10,12 @@ Script (record on a phone, no video host):
 
 1. Open `/g/qr_strand14`. Show Wi-Fi and house rules (about 15 s).
 2. Tap report, choose a category, write one sentence, attach a photo if you have one (about 20 s).
-3. Open `/login` as host (`anna@homioqo.se`), open the new case, assign LåsExpressen / Omar (about 25 s).
+3. Register a real host account, open the new case, and assign a contractor (about 25 s).
 
-## Test accounts (seed only)
+## Test accounts
 
-Password for all: `demo1234`
-
-| Role | Email | Notes |
-| --- | --- | --- |
-| Host | `anna@homioqo.se` | Bergström Fastigheter |
-| Cleaner | `maria@homioqo.se` | Solsidan + Mälarhusen |
-| Contractor | `omar@homioqo.se` | Assigned lock work on Villa Sol |
-| Owner | `lina@homioqo.se` | Villa Sol only |
-| Other host | `erik@norrbo.se` | Separate org, for isolation checks |
+There is no public demo login. Use a temporary registered account for outreach
+walkthroughs, then delete it. Seed fixtures exist only inside automated tests.
 | Guest | no login | `/g/qr_strand14` or `/g/qr_solsidan` |
 
 ## Outreach email (Swedish)

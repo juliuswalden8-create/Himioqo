@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { SiteHeader } from "@/components/site-header";
+import type { Metadata } from "next";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.legal.terms, { index: true });
+}
 
 export default async function TermsPage() {
   const locale = await getLocale();

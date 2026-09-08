@@ -33,3 +33,5 @@ export function CreateCleaningDialog({
     </Dialog>
   );
 }
+
+export const AppFormDialog = CreateCleaningDialog;

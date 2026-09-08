@@ -1,10 +1,10 @@
 /**
  * In-memory application store.
  *
- * Data is seeded on first access and dies on process restart (cold start,
- * deploy, idle serverless). `supabase/schema.sql` exists but is not wired —
- * do not treat this as durable persistence. Demo login and trial signups
- * live here until a dedicated database pass.
+ * Customer workspaces start empty. Seed data is loaded only by resetStore()
+ * for tests. Data dies on process restart (cold start, deploy, idle
+ * serverless). `supabase/schema.sql` exists but is not wired — do not treat
+ * this as durable persistence.
  */
 import { format, parseISO, startOfMonth, subMonths } from "date-fns";
 import {
@@ -12,7 +12,10 @@ import {
   caseIsOpen,
   caseIsOverdue,
   cleaningBucket,
+  cleaningIsDone,
 } from "@/lib/ops-attention";
+import { periodDelta, ratioFromCounts } from "@/lib/ops-metrics";
+import { getPublicDemoGuide, isPublicProductDemo } from "@/lib/public-demo";
 import { sv } from "date-fns/locale";
 import {
   activity as seedActivity,
@@ -129,7 +132,7 @@ import type {
   VerificationToken,
 } from "@/lib/types";
 import { DEFAULT_CHECK_KEYS, DEFAULT_CHECK_LABELS } from "@/lib/cleaning";
-import { createId, createToken, daysFromNow, nowIso } from "@/lib/utils";
+import { createId, createToken, daysFromNow, nowIso, publicAccessTokenAllowed } from "@/lib/utils";
 
 interface StoreShape {
   organizations: Organization[];
@@ -168,17 +171,58 @@ const globalForStore = globalThis as unknown as { __hqStore10?: StoreShape };
 
 function getStore(): StoreShape {
   if (!globalForStore.__hqStore10) {
-    globalForStore.__hqStore10 = createInitial();
+    globalForStore.__hqStore10 = createEmpty();
   }
   return globalForStore.__hqStore10;
 }
 
-/** Test-only. Restores the seeded state so each test starts from a clean slate. */
+/** Test-only. Restores the seeded fixture so each test starts from a clean slate. */
 export function resetStore() {
-  globalForStore.__hqStore10 = createInitial();
+  globalForStore.__hqStore10 = createSeeded();
 }
 
-function createInitial(): StoreShape {
+function emptyCollections(): Omit<StoreShape, "caseSeq" | "verifyLinks"> {
+  return {
+    organizations: [],
+    profiles: [],
+    properties: [],
+    contractors: [],
+    cases: [],
+    attachments: [],
+    messages: [],
+    activity: [],
+    verificationTokens: [],
+    notices: [],
+    cleaners: [],
+    cleaningJobs: [],
+    cleaningPhotos: [],
+    cleaningIssues: [],
+    cleaningSchedules: [],
+    cleaningNotifications: [],
+    propertyGuides: [],
+    places: [],
+    propertyPlaces: [],
+    guideEvents: [],
+    caseNotes: [],
+    notifications: [],
+    ownerAccess: [],
+    pilotLeads: [],
+    memberships: [],
+    invitations: [],
+    loginLinks: [],
+    qrSignOrders: [],
+  };
+}
+
+function createEmpty(): StoreShape {
+  return {
+    ...emptyCollections(),
+    verifyLinks: {},
+    caseSeq: 1,
+  };
+}
+
+function createSeeded(): StoreShape {
   return {
     organizations: [structuredClone(seedOrganization), structuredClone(seedOtherOrganization)],
     profiles: structuredClone(seedProfiles),
@@ -777,6 +821,8 @@ export function getProperty(organizationId: string, id: string) {
 }
 
 export function getPropertyByToken(token: string) {
+  if (isPublicProductDemo(token)) return undefined;
+  if (!publicAccessTokenAllowed(token)) return undefined;
   const property = getStore().properties.find((p) => p.reportToken === token);
   if (!property) return undefined;
   if (!guestLinkIsOpen(property)) return undefined;
@@ -997,13 +1043,23 @@ export function listCases(
       if (sort === "priority") {
         const diff = priorityRank[a.priority] - priorityRank[b.priority];
         if (diff) return diff;
-      } else if (sort === "status") {
+        return b.createdAt.localeCompare(a.createdAt);
+      }
+      if (sort === "status") {
         const diff = statusRank[a.status] - statusRank[b.status];
         if (diff) return diff;
-      } else {
-        const diff = caseAttentionRank(a) - caseAttentionRank(b);
-        if (diff) return diff;
+        return b.createdAt.localeCompare(a.createdAt);
       }
+      if (sort === "oldest") {
+        const attention = caseAttentionRank(a) - caseAttentionRank(b);
+        if (attention) return attention;
+        return a.createdAt.localeCompare(b.createdAt);
+      }
+      if (sort === "updated") {
+        return b.updatedAt.localeCompare(a.updatedAt);
+      }
+      const attention = caseAttentionRank(a) - caseAttentionRank(b);
+      if (attention) return attention;
       return b.createdAt.localeCompare(a.createdAt);
     })
     .map(hydrateCase);
@@ -1017,6 +1073,7 @@ export function getCase(organizationId: string, id: string) {
 }
 
 export function getCaseByTrackToken(token: string) {
+  if (!publicAccessTokenAllowed(token)) return undefined;
   const item = getStore().cases.find((c) => c.trackToken === token);
   return item ? hydrateCase(item) : undefined;
 }
@@ -1063,47 +1120,132 @@ export function getDashboardStats(organizationId: string): DashboardStats {
   };
 }
 
-export function getUsageMetrics(organizationId: string): UsageMetrics {
+const MS_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+function inPeriod(iso: string, startIso: string, endIso?: string) {
+  if (iso < startIso) return false;
+  if (endIso && iso >= endIso) return false;
+  return true;
+}
+
+function usageWindow(organizationId: string, startIso: string, endIso?: string) {
   const store = getStore();
-  const properties = listProperties(organizationId);
-  const cases = listCases(organizationId);
-  const org = getOrganization(organizationId);
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const closed = cases.filter(
-    (item) =>
-      CLOSED_STATUSES.includes(item.status) &&
-      item.completedAt &&
-      item.completedAt >= since,
-  );
-  const hours = closed.map(
-    (item) => (Date.parse(item.completedAt!) - Date.parse(item.createdAt)) / 3_600_000,
-  );
-  const avg = hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null;
+  const cases = store.cases.filter((item) => item.organizationId === organizationId);
   const events = store.guideEvents.filter(
-    (item) => item.organizationId === organizationId && item.createdAt >= since,
+    (item) => item.organizationId === organizationId && inPeriod(item.createdAt, startIso, endIso),
   );
   const cleanings = store.cleaningJobs.filter(
     (job) =>
       job.organizationId === organizationId &&
-      (job.status === "completed" || job.status === "approved") &&
-      (job.completedAt ?? job.updatedAt) >= since,
+      cleaningIsDone(job.status) &&
+      inPeriod(job.completedAt ?? job.updatedAt, startIso, endIso),
   );
-  const wifiCopies = events.filter((item) => item.kind === "click_wifi").length;
-  const scans = events.filter((item) => item.kind === "scan").length;
+  const closed = cases.filter(
+    (item) =>
+      CLOSED_STATUSES.includes(item.status) &&
+      item.completedAt &&
+      inPeriod(item.completedAt, startIso, endIso),
+  );
   return {
-    scans,
-    reports: cases.filter((item) => item.createdAt >= since).length,
-    avgResolutionHours: avg === null ? null : Math.round(avg * 10) / 10,
+    scans: events.filter((item) => item.kind === "scan").length,
+    reports: cases.filter((item) => inPeriod(item.createdAt, startIso, endIso)).length,
+    wifiCopies: events.filter((item) => item.kind === "click_wifi").length,
+    contactClicks: events.filter((item) => CONTACT_CLICKS.includes(item.kind)).length,
     cleaningsCompleted: cleanings.length,
     handledCases: closed.length,
-    wifiCopies,
-    guideViews: scans,
+    closed,
+  };
+}
+
+export function getUsageMetrics(organizationId: string): UsageMetrics {
+  const properties = listProperties(organizationId);
+  const org = getOrganization(organizationId);
+  const now = Date.now();
+  const currentStart = new Date(now - MS_30_DAYS).toISOString();
+  const previousStart = new Date(now - MS_30_DAYS * 2).toISOString();
+  const current = usageWindow(organizationId, currentStart);
+  const previous = usageWindow(organizationId, previousStart, currentStart);
+  const hours = current.closed.map(
+    (item) => (Date.parse(item.completedAt!) - Date.parse(item.createdAt)) / 3_600_000,
+  );
+  const avg = hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null;
+  return {
+    scans: current.scans,
+    reports: current.reports,
+    avgResolutionHours: avg === null ? null : Math.round(avg * 10) / 10,
+    cleaningsCompleted: current.cleaningsCompleted,
+    handledCases: current.handledCases,
+    wifiCopies: current.wifiCopies,
+    contactClicks: current.contactClicks,
+    guideViews: current.scans,
     propertiesCreated: properties.length,
     propertiesWithWifi: properties.filter((property) => Boolean(getPropertyGuide(property.id)?.wifiName))
       .length,
     trial: isTrialActive(org),
     billed: Boolean(org?.billed),
+    deltas: {
+      scans: periodDelta(current.scans, previous.scans),
+      wifiCopies: periodDelta(current.wifiCopies, previous.wifiCopies),
+      contactClicks: periodDelta(current.contactClicks, previous.contactClicks),
+      reports: periodDelta(current.reports, previous.reports),
+    },
   };
+}
+
+export function getResultMetrics(organizationId: string) {
+  const properties = listProperties(organizationId);
+  const store = getStore();
+  const since = new Date(Date.now() - MS_30_DAYS).toISOString();
+  const periodJobs = store.cleaningJobs.filter(
+    (job) => job.organizationId === organizationId && inPeriod(job.scheduledAt, since),
+  );
+  const periodCases = store.cases.filter(
+    (item) => item.organizationId === organizationId && inPeriod(item.createdAt, since),
+  );
+  return {
+    homesReady: ratioFromCounts(
+      properties.filter((property) => Boolean(property.guestReady)).length,
+      properties.length,
+    ),
+    cleanings: ratioFromCounts(
+      periodJobs.filter((job) => cleaningIsDone(job.status)).length,
+      periodJobs.length,
+    ),
+    cases: ratioFromCounts(
+      periodCases.filter((item) => CLOSED_STATUSES.includes(item.status)).length,
+      periodCases.length,
+    ),
+  };
+}
+
+export function listRecentOpsActivity(organizationId: string, limit = 5) {
+  const store = getStore();
+  const cases = store.cases.filter((item) => item.organizationId === organizationId);
+  const caseActivity = store.activity
+    .filter((item) => cases.some((row) => row.id === item.caseId))
+    .map((item) => {
+      const related = cases.find((row) => row.id === item.caseId);
+      const property = store.properties.find((home) => home.id === related?.propertyId);
+      return {
+        id: item.id,
+        at: item.createdAt,
+        text: item.text,
+        actorName: item.actorName,
+        propertyName: property?.name ?? "",
+      };
+    });
+  const cleaning = store.cleaningNotifications
+    .filter((item) => item.organizationId === organizationId)
+    .map((item) => ({
+      id: item.id,
+      at: item.createdAt,
+      text: item.propertyName,
+      actorName: "",
+      propertyName: item.propertyName,
+    }));
+  return [...caseActivity, ...cleaning]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, limit);
 }
 
 export function getAttentionProperties(organizationId: string) {
@@ -1268,6 +1410,9 @@ export function submitReport(input: {
   photos: { url: string; caption?: string }[];
   locale?: string;
 }) {
+  if (isPublicProductDemo(input.propertyToken)) {
+    throw new Error("demo_readonly");
+  }
   const property = getPropertyByToken(input.propertyToken);
   if (!property) throw new Error("Fastigheten hittades inte");
   const store = getStore();
@@ -1507,7 +1652,14 @@ export function addAfterPhotos(
   return hydrateCase(item);
 }
 
+function requirePublicAccessToken(token: string) {
+  if (!publicAccessTokenAllowed(token)) {
+    throw new Error("Länken gäller inte längre");
+  }
+}
+
 export function tenantConfirm(trackToken: string, actorName: string) {
+  requirePublicAccessToken(trackToken);
   const store = getStore();
   const item = store.cases.find((c) => c.trackToken === trackToken);
   if (!item) throw new Error("Ärendet hittades inte");
@@ -1676,6 +1828,7 @@ export function getCleaningJob(organizationId: string, id: string) {
 }
 
 export function getCleaningJobByToken(token: string) {
+  if (!publicAccessTokenAllowed(token)) return undefined;
   const job = getStore().cleaningJobs.find((j) => j.accessToken === token);
   return job ? hydrateCleaningJob(job) : undefined;
 }
@@ -1809,6 +1962,7 @@ export function updateCleaningStatus(tokenOrId: string, status: CleaningStatus, 
 }
 
 export function recordCleaningMinutes(token: string, minutes: number) {
+  requirePublicAccessToken(token);
   const job = getStore().cleaningJobs.find((item) => item.accessToken === token);
   if (!job) throw new Error("Uppdraget hittades inte");
   const value = Math.round(minutes);
@@ -1821,6 +1975,7 @@ export function recordCleaningMinutes(token: string, minutes: number) {
 }
 
 export function toggleCleaningItem(token: string, itemId: string, done: boolean) {
+  requirePublicAccessToken(token);
   const job = getStore().cleaningJobs.find((j) => j.accessToken === token);
   if (!job) throw new Error("Uppdraget hittades inte");
   const item = job.checklist.find((c) => c.id === itemId);
@@ -1835,6 +1990,7 @@ export function addCleaningPhotos(
   token: string,
   photos: { url: string; kind: "before" | "after"; caption?: string }[],
 ) {
+  requirePublicAccessToken(token);
   const store = getStore();
   const job = store.cleaningJobs.find((j) => j.accessToken === token);
   if (!job) throw new Error("Uppdraget hittades inte");
@@ -1861,6 +2017,7 @@ export function reportCleaningIssue(input: {
   convert: boolean;
   reporterName: string;
 }) {
+  requirePublicAccessToken(input.token);
   const store = getStore();
   const job = store.cleaningJobs.find((j) => j.accessToken === input.token);
   if (!job) throw new Error("Uppdraget hittades inte");
@@ -2535,6 +2692,7 @@ export function rotateWorkToken(organizationId: string, caseId: string) {
 
 /** Contractor-side lookup. Only resolves while the token is the current one. */
 export function getCaseByWorkToken(token: string) {
+  if (!publicAccessTokenAllowed(token)) return undefined;
   const item = getStore().cases.find((c) => c.workToken === token && Boolean(token));
   return item ? hydrateCase(item) : undefined;
 }
@@ -2545,6 +2703,7 @@ export function contractorRespond(input: {
   reason?: string;
   actorName: string;
 }) {
+  requirePublicAccessToken(input.token);
   const store = getStore();
   const item = store.cases.find((c) => c.workToken === input.token && Boolean(input.token));
   if (!item) throw new Error("Uppdraget hittades inte");
@@ -2734,6 +2893,7 @@ export function rotateOwnerAccess(organizationId: string, id: string) {
  * never leak by default.
  */
 export function getOwnerView(token: string) {
+  if (!publicAccessTokenAllowed(token)) return undefined;
   const store = getStore();
   const access = store.ownerAccess.find((o) => o.token === token && o.active);
   if (!access) return undefined;
@@ -2813,6 +2973,8 @@ export function listPilotLeads() {
 }
 
 export function getGuestGuide(token: string) {
+  if (isPublicProductDemo(token)) return getPublicDemoGuide();
+  if (!publicAccessTokenAllowed(token)) return undefined;
   const property = getPropertyByToken(token);
   if (!property) return undefined;
   const org = getOrganization(property.organizationId);

@@ -26,6 +26,7 @@ export async function GET(
       "Content-Type": "image/png",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet",
     },
   });
 }

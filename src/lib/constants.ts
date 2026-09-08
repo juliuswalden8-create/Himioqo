@@ -1,9 +1,3 @@
-export const DEMO_EMAIL = "anna@homioqo.se";
-export const DEMO_PASSWORD = "demo1234";
-export const TEST_CLEANER_EMAIL = "maria@homioqo.se";
-export const TEST_CONTRACTOR_EMAIL = "omar@homioqo.se";
-export const TEST_OWNER_EMAIL = "lina@homioqo.se";
-export const TEST_OTHER_HOST_EMAIL = "erik@norrbo.se";
 export const SESSION_COOKIE = "homioqo.session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 export const LOCALE_COOKIE = "homioqo.locale";

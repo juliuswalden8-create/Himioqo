@@ -12,7 +12,7 @@ Det här dokumentet är checklistan för att göra den synlig för allmänheten:
 
 1. Öppna [https://homioqo.vercel.app](https://homioqo.vercel.app) i ett privat fönster.
 2. Startsida, Logga in och Kom igång ska ladda.
-3. Demokonto: `anna@homioqo.se` / `demo1234`.
+3. Det finns inget demokonto. Skapa ett riktigt konto via Kom igång. Den publika Villa Sol-guiden kräver ingen inloggning.
 
 Om sidan är vit eller visar ett client-fel: gör en hård omladdning (**Cmd + Shift + R**). Safari kan hålla kvar gamla JavaScript-filer efter en deploy.
 

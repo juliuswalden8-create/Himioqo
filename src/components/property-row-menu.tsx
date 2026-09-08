@@ -17,6 +17,8 @@ export function PropertyRowMenu({
   guideHref,
   caseLabel,
   caseHref,
+  settingsLabel,
+  settingsHref,
 }: {
   label: string;
   qrLabel: string;
@@ -25,6 +27,8 @@ export function PropertyRowMenu({
   guideHref: string;
   caseLabel: string;
   caseHref: string;
+  settingsLabel: string;
+  settingsHref: string;
 }) {
   return (
     <DropdownMenu>
@@ -46,6 +50,9 @@ export function PropertyRowMenu({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={caseHref}>{caseLabel}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={settingsHref}>{settingsLabel}</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

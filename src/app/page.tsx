@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { MarketingSite } from "@/components/landing/marketing-site";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { resolveAudience } from "@/lib/audience";
+import { INDEXABLE_ROBOTS } from "@/lib/security/robots";
 import { siteOrigin } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: m.title },
     description: m.description,
+    robots: INDEXABLE_ROBOTS,
+    alternates: { canonical: "/" },
     openGraph: {
       title: m.ogTitle,
       description: m.ogDescription,

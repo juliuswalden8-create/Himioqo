@@ -38,7 +38,7 @@ describe("session membership", () => {
       firstName: "Mia",
       lastName: "Clean",
       email: "mia@clean.test",
-      password: "demo1234",
+      password: "seed-fixture-only",
     });
     const cleanerMem = createMembership({
       userId: cleaner.id,

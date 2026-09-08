@@ -1,11 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { decodeAccessTicket, isAccessTicketExpired } from "@/lib/access/tickets";
 import { AcceptInviteForm } from "@/components/access/accept-invite-form";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { interpolate } from "@/i18n/interpolate";
 import { getInvitationByToken, getOrganization } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.access.inviteTitle);
+}
 
 export default async function AcceptInvitePage({
   params,

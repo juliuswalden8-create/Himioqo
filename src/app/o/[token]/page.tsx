@@ -1,13 +1,19 @@
 import Image from "next/image";
+import type { Metadata } from "next";
 import { CleaningStatusBadge } from "@/components/cleaning-status";
 import { StatusBadge } from "@/components/status-badge";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getOwnerView } from "@/lib/data/store";
 import { formatDate } from "@/lib/format";
 import { categoryLabel } from "@/lib/labels";
+import { pageMetadata } from "@/lib/page-metadata";
 import { CLOSED_STATUSES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.owner.title);
+}
 
 export default async function OwnerViewPage({
   params,

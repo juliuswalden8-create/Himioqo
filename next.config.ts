@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import { SECURITY_HEADERS } from "./src/lib/security/headers";
+import { PRIVATE_HEADER_SOURCES, X_ROBOTS_TAG_VALUE } from "./src/lib/security/robots";
+
+const NOINDEX_HEADER = { key: "X-Robots-Tag", value: X_ROBOTS_TAG_VALUE };
 
 const nextConfig: NextConfig = {
   // Lets a production build run against a separate output folder while
@@ -14,7 +17,13 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      ...PRIVATE_HEADER_SOURCES.map((source) => ({
+        source,
+        headers: [NOINDEX_HEADER],
+      })),
+    ];
   },
   async rewrites() {
     return [

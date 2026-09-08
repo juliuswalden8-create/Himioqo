@@ -8,14 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormError, FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { Dictionary } from "@/i18n/messages";
-import { demoLoginAction } from "@/lib/actions";
 import { loginWithIntentAction, magicLinkAction } from "@/lib/access-actions";
-import {
-  DEMO_EMAIL,
-  DEMO_PASSWORD,
-  TEST_CLEANER_EMAIL,
-  TEST_CONTRACTOR_EMAIL,
-} from "@/lib/constants";
 import type { LoginIntent } from "@/lib/types";
 
 const ROLES: { id: LoginIntent; icon: typeof Building2 }[] = [
@@ -26,7 +19,7 @@ const ROLES: { id: LoginIntent; icon: typeof Building2 }[] = [
 
 export function LoginForm({ dict, next }: { dict: Dictionary; next: string }) {
   const [intent, setIntent] = useState<LoginIntent | null>(null);
-  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [email, setEmail] = useState("");
   const [state, action, pending] = useActionState(loginWithIntentAction, null);
   const [magic, magicAction, magicPending] = useActionState(magicLinkAction, null);
 
@@ -52,16 +45,7 @@ export function LoginForm({ dict, next }: { dict: Dictionary; next: string }) {
                   <button
                     key={role.id}
                     type="button"
-                    onClick={() => {
-                      setIntent(role.id);
-                      setEmail(
-                        role.id === "host"
-                          ? DEMO_EMAIL
-                          : role.id === "cleaner"
-                            ? TEST_CLEANER_EMAIL
-                            : TEST_CONTRACTOR_EMAIL,
-                      );
-                    }}
+                    onClick={() => setIntent(role.id)}
                     className="flex min-h-16 items-center gap-4 rounded-2xl border border-border bg-white px-4 py-4 text-left shadow-soft hover:border-navy-800"
                   >
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-navy-50 text-navy-800">
@@ -109,7 +93,6 @@ export function LoginForm({ dict, next }: { dict: Dictionary; next: string }) {
                     name="password"
                     type="password"
                     autoComplete="current-password"
-                    defaultValue={DEMO_PASSWORD}
                     required
                   />
                 </FormField>
@@ -134,13 +117,6 @@ export function LoginForm({ dict, next }: { dict: Dictionary; next: string }) {
                   </FormError>
                 ) : null}
               </form>
-              {intent === "host" ? (
-                <form action={demoLoginAction} className="mt-2">
-                  <Button type="submit" variant="secondary" className="w-full">
-                    {dict.login.demo}
-                  </Button>
-                </form>
-              ) : null}
             </>
           )}
 

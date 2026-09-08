@@ -1,13 +1,19 @@
+import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { CheckEmailActions } from "@/components/check-email-actions";
 import { ProgressSteps } from "@/components/progress-steps";
 import { SiteHeader } from "@/components/site-header";
 import { interpolate, getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { maskEmail } from "@/lib/crypto";
+import { pageMetadata } from "@/lib/page-metadata";
 import { getPendingSignup } from "@/lib/pending";
 import { requestUrl } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.check.title);
+}
 
 export default async function CheckEmailPage({
   searchParams,

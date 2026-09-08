@@ -68,7 +68,7 @@ describe("role isolation", () => {
       firstName: "C",
       lastName: "Lean",
       email: "c@clean.security",
-      password: "demo1234",
+      password: "seed-fixture-only",
     });
     const mem = createMembership({
       userId: cleaner.id,
@@ -243,8 +243,8 @@ describe("xss and injection stored as text", () => {
 
 describe("passwords and reset", () => {
   it("never treats a plaintext string as a valid hash", () => {
-    expect(verifyPassword("demo1234", "demo1234")).toBe(false);
-    expect(verifyPassword("demo1234", hashPassword("demo1234"))).toBe(true);
+    expect(verifyPassword("seed-fixture-only", "seed-fixture-only")).toBe(false);
+    expect(verifyPassword("seed-fixture-only", hashPassword("seed-fixture-only"))).toBe(true);
   });
 
   it("issues a one-time timed reset token and revokes the old session version", () => {

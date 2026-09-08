@@ -1,11 +1,17 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { AreaExplore } from "@/components/guest/area-explore";
 import { GuestShell } from "@/components/guest/guest-shell";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getGuestGuide } from "@/lib/data/store";
+import { pageMetadata } from "@/lib/page-metadata";
 import { PLACE_CATEGORIES, type PlaceCategory } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.guide.metaTitle);
+}
 
 export default async function AreaCategoryPage({
   params,

@@ -184,7 +184,7 @@ npm run build                          # production build
 NEXT_DIST_DIR=.next-build npm run build  # build without disturbing a running dev server
 ```
 
-Demo login: `anna@homioqo.se` / `demo1234`, or the **Öppna demokontot** button.
+There is no public demo login. Register a real account, or open the isolated Villa Sol guest guide.
 
 ## 10. Validation at end of session
 

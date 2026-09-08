@@ -6,7 +6,7 @@ Routes are given as they appear in `src/app`.
 
 ### Sign in
 
-`/login` → **Öppna demokontot**, or `anna@homioqo.se` / `demo1234` → `/app`.
+`/login` with a real verified account → `/app`. There is no demo login.
 
 Unauthenticated requests to `/app/*` are redirected to `/login` by middleware,
 and every page independently calls `requireSession()`.

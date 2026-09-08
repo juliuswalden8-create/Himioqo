@@ -44,20 +44,13 @@ import { propertyTypeLabel } from "@/lib/labels";
 import { getSession } from "@/lib/session";
 import { appUrl, cn } from "@/lib/utils";
 import { pickText } from "@/lib/places";
+import { NOINDEX_ROBOTS } from "@/lib/security/robots";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
-  const { id } = await params;
-  const locale = await getLocale();
-  const dict = await getDictionary(locale);
-  const session = await getSession();
-  const property = session ? getProperty(session.organizationId, id) : undefined;
-  return { title: property?.name ?? dict.homes.title };
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(await getLocale());
+  return { title: dict.homes.title, robots: NOINDEX_ROBOTS };
 }
 
 export default async function PropertyAdminPage({

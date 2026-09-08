@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { Metadata } from "next";
 import {
   RespondButtons,
   StatusButtons,
@@ -9,8 +10,13 @@ import { StatusBadge, PriorityBadge } from "@/components/status-badge";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 import { getCaseByWorkToken } from "@/lib/data/store";
 import { categoryLabel } from "@/lib/labels";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata((dict) => dict.contractor.title);
+}
 
 export default async function ContractorTaskPage({
   params,

@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { marketingEn, marketingEs } from "@/i18n/marketing";
 import { en, es, sv } from "@/i18n/messages";
 import {
-  DEMO_EMAIL,
-  DEMO_PASSWORD,
-  TEST_CLEANER_EMAIL,
-  TEST_CONTRACTOR_EMAIL,
-} from "@/lib/constants";
+  SEED_CLEANER_EMAIL,
+  SEED_CONTRACTOR_EMAIL,
+  SEED_FIXTURE_PASSWORD,
+  SEED_HOST_EMAIL,
+} from "@/lib/data/seed";
 import {
   approveCase,
   authenticate,
@@ -132,20 +132,25 @@ describe("copy and locale", () => {
     expect(es.filters.sortDate).toBe("Más recientes");
     expect(sv.dashboard.attention).toBe("Behöver din uppmärksamhet");
     expect(es.dashboard.attention).toBe("Necesita tu atención");
+    expect(sv.login.demo).toBe("");
+    expect(en.login.demo).toBe("");
+    expect(es.login.demo).toBe("");
+    expect(sv.dashboard.results30).toMatch(/30/);
+    expect(es.dashboard.ringNoData).not.toBe(en.dashboard.ringNoData);
   });
 });
 
-describe("demo logins and roles", () => {
-  it("keeps the public demo host login unchanged", () => {
-    const host = authenticate(DEMO_EMAIL, DEMO_PASSWORD);
-    expect(host?.email).toBe("anna@homioqo.se");
+describe("fixture roles and empty production store", () => {
+  it("keeps seeded fixture roles available to tests only", () => {
+    const host = authenticate(SEED_HOST_EMAIL, SEED_FIXTURE_PASSWORD);
+    expect(host?.email).toBe(SEED_HOST_EMAIL);
     expect(host?.id).toBe("profile_anna");
     expect(getMembership("mem_anna_host")?.role).toBe("host");
   });
 
-  it("opens the cleaner and contractor demo roles", () => {
-    const cleaner = authenticate(TEST_CLEANER_EMAIL, DEMO_PASSWORD);
-    const contractor = authenticate(TEST_CONTRACTOR_EMAIL, DEMO_PASSWORD);
+  it("opens the cleaner and contractor fixture roles", () => {
+    const cleaner = authenticate(SEED_CLEANER_EMAIL, SEED_FIXTURE_PASSWORD);
+    const contractor = authenticate(SEED_CONTRACTOR_EMAIL, SEED_FIXTURE_PASSWORD);
     expect(cleaner?.id).toBe("profile_maria");
     expect(contractor?.id).toBe("profile_omar");
     expect(getMembership("mem_maria_cleaner")?.role).toBe("cleaner");

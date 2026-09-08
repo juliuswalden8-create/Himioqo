@@ -9,7 +9,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 export const dynamic = "force-dynamic";
 
 export function generateMetadata(): Promise<Metadata> {
-  return pageMetadata((dict) => dict.demo.title);
+  return pageMetadata((dict) => dict.demo.title, { index: true });
 }
 
 export default async function DemoPage() {

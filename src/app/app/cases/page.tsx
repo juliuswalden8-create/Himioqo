@@ -73,13 +73,15 @@ export default async function CasesPage({
     sort,
   });
 
-  const hasFilters =
-    Boolean(query) ||
-    status !== "all" ||
-    priority !== "all" ||
-    category !== "all" ||
-    propertyId !== "all" ||
-    sort !== "date";
+  const filterCount = [
+    query,
+    status !== "all",
+    priority !== "all",
+    category !== "all",
+    propertyId !== "all",
+    sort !== "date",
+  ].filter(Boolean).length;
+  const hasFilters = filterCount > 0;
 
   const allOption = { value: "all", label: dict.filters.all };
 
@@ -102,7 +104,12 @@ export default async function CasesPage({
           searchLabel={dict.filters.search}
           searchPlaceholder={dict.filters.searchCases}
           searchValue={query}
-          clearLabel={dict.filters.clear}
+          clearLabel={dict.filters.clearFilters}
+          filterCountLabel={
+            hasFilters
+              ? interpolate(dict.filters.activeFilters, { count: String(filterCount) })
+              : undefined
+          }
           hasFilters={hasFilters}
           selects={[
             {
@@ -156,8 +163,9 @@ export default async function CasesPage({
               value: sort,
               options: [
                 { value: "date", label: dict.filters.sortDate },
+                { value: "oldest", label: dict.filters.sortOldest },
                 { value: "priority", label: dict.filters.sortPriority },
-                { value: "status", label: dict.filters.sortStatus },
+                { value: "updated", label: dict.filters.sortUpdated },
               ],
             },
           ]}

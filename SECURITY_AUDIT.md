@@ -33,7 +33,7 @@ Server only: `SESSION_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `R
 | ID | Issue | Status |
 | --- | --- | --- |
 | C1 | Persistence is in-memory. No durable RLS, backups, or multi-instance session store. | **Open** — architecture. Do not claim production-ready storage. |
-| C2 | Seed passwords were stored as plaintext `demo1234`; `verifyPassword` accepted plaintext. | **Fixed** — scrypt hashes in seed; plaintext compare removed. |
+| C2 | Seed passwords were stored as plaintext; `verifyPassword` accepted plaintext. | **Fixed** — scrypt hashes in seed; plaintext compare removed. |
 
 ### High
 
@@ -63,7 +63,7 @@ Server only: `SESSION_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `R
 | L1 | CSP needs `unsafe-inline` for Next.js 15 inline bootstraps. No `unsafe-eval`, no `*`. | Documented |
 | L2 | In-memory rate limits reset on process restart and do not share across Vercel instances. | Open |
 | L3 | `verifyLinks` can hold a raw verify token in memory for demo fallback. | Open — never log it |
-| L4 | Demo password `demo1234` is public by design. Rotate before any real customer data lives here. | Open |
+| L4 | Public demo login has been removed. Seed fixtures stay inside automated tests only. | Fixed |
 | L5 | Full i18n dictionary is still sent to some guest client components. | Open — labels, not owner notes |
 
 ## What was changed

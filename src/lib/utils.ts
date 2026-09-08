@@ -19,8 +19,10 @@ export function createId(): string {
 /**
  * Public QR, contractor, cleaner and owner links are guarded only by these
  * tokens, so weak randomness would make them guessable. Fail loudly instead of
- * degrading to Math.random.
+ * degrading to Math.random. 18 random bytes rendered as hex.
  */
+export const ACCESS_TOKEN_BODY_LENGTH = 36;
+
 export function createToken(prefix = "pc"): string {
   if (typeof crypto === "undefined" || !crypto.getRandomValues) {
     throw new Error("A secure random source is required to create access tokens.");
@@ -29,6 +31,21 @@ export function createToken(prefix = "pc"): string {
   crypto.getRandomValues(bytes);
   const body = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   return `${prefix}_${body}`;
+}
+
+export function isSecureAccessToken(token: string) {
+  return new RegExp(`^[a-z]{2,8}_[0-9a-f]{${ACCESS_TOKEN_BODY_LENGTH}}$`).test(token.trim());
+}
+
+/**
+ * Guessable tokens (seed fixtures like qr_strand14) never resolve in production.
+ * The public product demo is handled separately and only returns fake example data.
+ */
+export function publicAccessTokenAllowed(token: string) {
+  const value = token.trim();
+  if (!value) return false;
+  if (isSecureAccessToken(value)) return true;
+  return process.env.NODE_ENV !== "production";
 }
 
 export function nowIso(): string {
